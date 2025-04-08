@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hiker Dashboard</title>
+  <!-- External Dependencies -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Component Styles -->
+  <link rel="stylesheet" href="src/styles/main.css" />
+  <link rel="stylesheet" href="src/components/Sidebar/Sidebar.css" />
+  <link rel="stylesheet" href="src/components/Map/Map.css" />
+  <link rel="stylesheet" href="src/components/Modal/Modal.css" />
+  <link rel="stylesheet" href="src/components/Settings/Settings.css" />
+</head>
+<body>
+  <div class="dashboard-container">
+    <div id="sidebar">
+      <div class="sidebar-header">
+        <div class="header-title-settings">
+          <h2><i class="fas fa-mountain"></i> Hiker Tracker</h2>
+          <button id="settings-btn" class="settings-btn" title="Settings">
+            <i class="fas fa-cog"></i>
+          </button>
+        </div>
+        <div class="search-container">
+          <input type="text" id="hiker-search" placeholder="Search hiker...">
+          <i class="fas fa-search search-icon"></i>
+        </div>
+      </div>
+      <div class="dashboard-stats">
+        <div class="stat-card">
+          <div class="stat-icon"><i class="fas fa-users"></i></div>
+          <div class="stat-info">
+            <span id="total-hikers">0</span>
+            <span>Hikers</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon sos-icon"><i class="fas fa-exclamation-triangle"></i></div>
+          <div class="stat-info">
+            <span id="sos-count">0</span>
+            <span>SOS</span>
+          </div>
+        </div>
+      </div>
+      <div id="hiker-list"></div>
+    </div>
+    <div id="map-container">
+      <div id="map"></div>
+      <div class="map-controls">
+        <button id="center-map"><i class="fas fa-crosshairs"></i></button>
+        <button id="toggle-all-hikers"><i class="fas fa-users"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="hiker-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-name"></h3>
+        <button class="close-btn"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="hiker-detail">
+          <div class="detail-icon"><i class="fas fa-signal"></i></div>
+          <div class="detail-info">
+            <span class="detail-label">Status</span>
+            <span id="modal-status" class="detail-value"></span>
+          </div>
+        </div>
+        <div class="hiker-detail">
+          <div class="detail-icon"><i class="fas fa-battery-half"></i></div>
+          <div class="detail-info">
+            <span class="detail-label">Battery</span>
+            <div class="detail-value">
+              <span id="modal-battery"></span>
+              <div class="battery-bar">
+                <div id="modal-battery-fill" class="battery-fill"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="hiker-detail">
+          <div class="detail-icon"><i class="fas fa-clock"></i></div>
+          <div class="detail-info">
+            <span class="detail-label">Last Update</span>
+            <span id="modal-lastupdate" class="detail-value"></span>
+          </div>
+        </div>
+        <div class="hiker-detail">
+          <div class="detail-icon"><i class="fas fa-map-marker-alt"></i></div>
+          <div class="detail-info">
+            <span class="detail-label">Coordinates</span>
+            <span id="modal-coords" class="detail-value"></span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="action-btn primary-btn" id="track-hiker">Track Hiker</button>
+        <button class="action-btn" id="send-message">Send Message</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal">
+    <div class="modal-content settings-modal-content">
+      <div class="modal-header">
+        <h3><i class="fas fa-cog"></i> Settings</h3>
+        <button class="close-btn" id="close-settings"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body settings-body">
+        <div class="settings-section">
+          <h4>Map Settings</h4>
+          <div class="setting-item">
+            <label for="map-style">Map Style:</label>
+            <select id="map-style" class="settings-input">
+              <option value="default">Default</option>
+              <option value="satellite">Satellite</option>
+              <option value="terrain">Terrain</option>
+              <option value="dark">Dark Mode</option>
+            </select>
+          </div>
+          <div class="setting-item">
+            <label for="default-zoom">Default Zoom Level:</label>
+            <div class="range-container">
+              <input type="range" id="default-zoom" min="5" max="18" value="12" class="settings-range">
+              <span id="zoom-value">12</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <h4>Simulation</h4>
+          <div class="setting-item">
+            <label for="simulation-speed">Simulation Speed:</label>
+            <div class="range-container">
+              <input type="range" id="simulation-speed" min="1000" max="5000" step="500" value="3000" class="settings-range">
+              <span id="speed-value">3000ms</span>
+            </div>
+          </div>
+          <div class="setting-item">
+            <label for="hikers-count">Number of Hikers:</label>
+            <div class="range-container">
+              <input type="range" id="hikers-count" min="5" max="20" value="10" class="settings-range">
+              <span id="hikers-count-value">10</span>
+            </div>
+          </div>
+          <div class="setting-item">
+            <div class="toggle-container">
+              <label for="auto-sos">Auto SOS Events:</label>
+              <label class="toggle">
+                <input type="checkbox" id="auto-sos" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <h4>Notifications</h4>
+          <div class="setting-item">
+            <div class="toggle-container">
+              <label for="sos-alerts">SOS Alerts:</label>
+              <label class="toggle">
+                <input type="checkbox" id="sos-alerts" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="setting-item">
+            <div class="toggle-container">
+              <label for="battery-alerts">Low Battery Alerts:</label>
+              <label class="toggle">
+                <input type="checkbox" id="battery-alerts" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="setting-item">
+            <label for="battery-threshold">Battery Alert Threshold (%):</label>
+            <div class="range-container">
+              <input type="range" id="battery-threshold" min="5" max="50" value="20" class="settings-range">
+              <span id="battery-threshold-value">20%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="action-btn primary-btn" id="save-settings">Save Settings</button>
+        <button class="action-btn" id="reset-settings">Reset to Default</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- External Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+  
+  <!-- Application Scripts (Module type to support ES6 imports) -->
+  <script type="module" src="src/app.js"></script>
+</body>
+</html> 

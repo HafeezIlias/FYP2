@@ -1,0 +1,430 @@
+/* Sidebar Component Styles */
+#sidebar {
+  width: 320px;
+  height: 100%;
+  border-right: 1px solid rgba(229, 231, 235, 0.8);
+  background-color: #fff;
+  overflow-y: auto;
+  transition: all 0.3s;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
+  padding: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.header-title-settings {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.header-title-settings h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-title-settings h2 i {
+  margin-right: 8px;
+  color: #4299e1;
+  flex-shrink: 0;
+}
+
+.settings-btn {
+  background: none;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.settings-btn:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+.sidebar-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+  color: #111827;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-title i {
+  margin-right: 8px;
+  color: #4f46e5;
+}
+
+.sidebar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sidebar-info {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 14px;
+}
+
+.sidebar-info-item {
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-info-item i {
+  margin-right: 6px;
+  color: #6b7280;
+}
+
+.sidebar-info-item.sos {
+  color: #b91c1c;
+}
+
+.sidebar-info-item.sos i {
+  color: #ef4444;
+}
+
+/* Search container */
+.search-container {
+  position: relative;
+  width: 100%;
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6b7280;
+  pointer-events: none;
+}
+
+#hiker-search {
+  width: 100%;
+  padding: 10px 16px 10px 40px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  outline: none;
+  font-size: 14px;
+  background-color: #f9fafb;
+  transition: all 0.3s;
+}
+
+#hiker-search:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+  background-color: #fff;
+}
+
+/* Hiker list */
+#hiker-list {
+  flex: 1;
+  padding: 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hiker-card {
+  background-color: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.hiker-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.06);
+  border-color: #d1d5db;
+}
+
+.hiker-card.active {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 1px #4f46e5;
+}
+
+.hiker-card.status-updated {
+  animation: flash-update 2s ease-out;
+}
+
+@keyframes flash-update {
+  0%, 100% {
+    background-color: #fff;
+  }
+  50% {
+    background-color: rgba(229, 231, 235, 0.5);
+  }
+}
+
+.hiker-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hiker-name {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  color: #111827;
+}
+
+.hiker-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.hiker-battery, .hiker-sos {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background-color: #f3f4f6;
+  color: #4b5563;
+}
+
+.hiker-battery i, .hiker-sos i {
+  margin-right: 4px;
+}
+
+.hiker-battery.low {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.hiker-battery.medium {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.hiker-sos {
+  display: none;
+}
+
+.hiker-sos.active {
+  display: inline-flex;
+  background-color: #fee2e2;
+  color: #b91c1c;
+  animation: pulse-sos 2s infinite;
+}
+
+.hiker-sos.active.handled {
+  background-color: #dcfce7;
+  color: #166534;
+  animation: none;
+}
+
+.hiker-sos.active.emergency {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  font-weight: 600;
+  animation: pulse-sos 1s infinite;
+}
+
+@keyframes pulse-sos {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.hiker-last-seen {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Footer */
+.sidebar-footer {
+  padding: 12px 16px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#settings-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #4b5563;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+#settings-button:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+#settings-button i {
+  font-size: 16px;
+}
+
+.dashboard-stats {
+  display: flex;
+  padding: 15px;
+  gap: 10px;
+}
+
+.stat-card {
+  flex: 1;
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  transition: transform 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+}
+
+.stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(66, 153, 225, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+}
+
+.stat-icon i {
+  color: #4299e1;
+  font-size: 18px;
+}
+
+.sos-icon {
+  background: rgba(245, 101, 101, 0.1);
+}
+
+.sos-icon i {
+  color: #f56565;
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-info span:first-child {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.stat-info span:last-child {
+  font-size: 13px;
+  color: #718096;
+}
+
+.hiker-card.sos {
+  border-left: 4px solid #f56565;
+}
+
+.hiker-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  font-weight: 600;
+  color: #4a5568;
+  font-size: 16px;
+}
+
+.hiker-name-status {
+  flex: 1;
+}
+
+.status-icon {
+  font-size: 12px;
+  margin-right: 5px;
+}
+
+.sos-badge {
+  background: #f56565;
+  color: white;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-weight: 500;
+  position: absolute;
+  top: 15px;
+  right: 15px;
+}
+
+.hiker-details {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-size: 12px;
+  color: #718096;
+}
+
+.hiker-detail-item {
+  display: flex;
+  align-items: center;
+}
+
+.hiker-detail-item i {
+  margin-right: 5px;
+  font-size: 11px;
+}
+
+.battery-bar {
+  height: 5px;
+  background: #edf2f7;
+  border-radius: 3px;
+  margin-top: 12px;
+  overflow: hidden;
+}
+
+.battery-fill {
+  height: 100%;
+  transition: width 0.3s, background-color 0.3s;
+} 

@@ -1,0 +1,162 @@
+/* Map Component Styles */
+#map-container {
+  flex: 1;
+  position: relative;
+}
+
+#map {
+  height: 100%;
+  width: 100%;
+}
+
+.map-controls {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.map-controls button {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background: white;
+  border: none;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.map-controls button:hover {
+  background: #f8fafc;
+  transform: scale(1.05);
+}
+
+.map-controls button i {
+  font-size: 18px;
+  color: #4a5568;
+}
+
+/* Improved marker styles for better readability */
+.hiker-marker-container {
+  position: relative;
+}
+
+.custom-marker {
+  background-color: #4299e1;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 0 2px #4299e1, 0 0 10px rgba(0, 0, 0, 0.25);
+  width: 12px;
+  height: 12px;
+  margin: 0 auto;
+  z-index: 1;
+}
+
+.custom-marker.sos {
+  background-color: #f56565;
+  box-shadow: 0 0 0 2px #f56565, 0 0 10px rgba(245, 101, 101, 0.6);
+  animation: pulse 1.5s infinite;
+}
+
+.custom-marker.sos.handled {
+  background-color: #68d391;
+  box-shadow: 0 0 0 2px #68d391, 0 0 10px rgba(104, 211, 145, 0.6);
+  animation: none;
+}
+
+.custom-marker.sos.emergency {
+  background-color: #f56565;
+  box-shadow: 0 0 0 2px #f56565, 0 0 10px rgba(245, 101, 101, 0.6);
+  animation: pulse 0.8s infinite;
+}
+
+.marker-label {
+  position: absolute;
+  top: -34px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.75);
+  color: white;
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  z-index: 2;
+  min-width: 80px;
+  text-align: center;
+  transition: all 0.2s ease;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.marker-label:after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid rgba(0, 0, 0, 0.75);
+}
+
+.marker-label.sos {
+  background-color: rgba(245, 101, 101, 0.9);
+  box-shadow: 0 0 5px rgba(245, 101, 101, 0.7);
+}
+
+.marker-label.sos:after {
+  border-top-color: rgba(245, 101, 101, 0.9);
+}
+
+.marker-label.sos.handled {
+  background-color: rgba(104, 211, 145, 0.9);
+  box-shadow: 0 0 5px rgba(104, 211, 145, 0.7);
+}
+
+.marker-label.sos.handled:after {
+  border-top-color: rgba(104, 211, 145, 0.9);
+}
+
+.marker-label.sos.emergency {
+  background-color: rgba(245, 101, 101, 0.95);
+  box-shadow: 0 0 8px rgba(245, 101, 101, 0.9);
+  font-weight: 600;
+}
+
+.marker-label.sos.emergency:after {
+  border-top-color: rgba(245, 101, 101, 0.95);
+}
+
+.sos-marker-icon {
+  font-size: 10px;
+  margin-left: 3px;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(245, 101, 101, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 15px rgba(245, 101, 101, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 101, 101, 0);
+  }
+} 

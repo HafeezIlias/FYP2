@@ -1,4 +1,4 @@
-/* Modern Dashboard CSS */
+/* Dashboard Component CSS */
 * {
   margin: 0;
   padding: 0;
@@ -560,4 +560,3 @@ body {
   50% { opacity: 0.4; }
   100% { opacity: 1; }
 }
-  
