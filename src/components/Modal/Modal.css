@@ -251,4 +251,47 @@
   color: #718096;
   margin-top: 4px;
   font-weight: normal;
+}
+
+/* SOS Specific Styles */
+.modal-sos-actions {
+  padding: 0 24px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sos-btn {
+  background-color: #68d391;
+  color: white;
+}
+
+.sos-btn:hover {
+  background-color: #48bb78;
+}
+
+.emergency-btn {
+  background-color: #f56565;
+  color: white;
+}
+
+.emergency-btn:hover {
+  background-color: #e53e3e;
+}
+
+.reset-btn {
+  background-color: #cbd5e0;
+  color: #4a5568;
+}
+
+.reset-btn:hover {
+  background-color: #a0aec0;
+}
+
+.sos-btn.disabled,
+.emergency-btn.disabled,
+.reset-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
 } 

@@ -2,6 +2,7 @@
  * Main Application - Coordinates all components
  */
 import { createSampleHikers } from './utils/helpers.js';
+import { fetchHikersFromFirebase, listenForHikersUpdates, updateHikerSosStatus } from './utils/firebase.js';
 import MapComponent from './components/Map/Map.js';
 import SidebarComponent from './components/Sidebar/Sidebar.js';
 import ModalComponent from './components/Modal/Modal.js';
@@ -25,6 +26,8 @@ class HikerTrackingApp {
       dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
     };
     this.settingsBtnId = 'settings-btn';
+    this.isUsingLiveData = true; // Flag to indicate if using live data
+    this.firebaseUnsubscribe = null; // Function to unsubscribe from Firebase updates
   }
 
   /**
@@ -32,7 +35,13 @@ class HikerTrackingApp {
    */
   async init() {
     // Initialize settings component first to load saved preferences
-    this.settings.init();
+    this.settings.init({
+      // Add callback for data source change
+      onDataSourceChange: (useFirebase) => {
+        this.handleDataSourceChange(useFirebase);
+      },
+      // Other settings callbacks can be added here
+    });
     
     // Setup settings button click event
     const settingsBtn = document.getElementById(this.settingsBtnId);
@@ -73,22 +82,110 @@ class HikerTrackingApp {
       // Mark emergency services dispatched callback
       (hikerId) => {
         this.handleSosAction(hikerId, 'emergency');
+      },
+      // Reset SOS callback
+      (hikerId) => {
+        this.handleSosAction(hikerId, 'reset');
       }
     );
     
     // Set simulation speed from settings
     this.simulationSpeed = initialSettings.simulation.updateInterval;
     
-    // Load sample data with count from settings
-    this.hikers = await createSampleHikers(10);
+    // Check if we should use Firebase or simulated data
+    this.isUsingLiveData = initialSettings.dataSource ? initialSettings.dataSource.useFirebase : true;
+    
+    // Try to load data from Firebase if using live data
+    if (this.isUsingLiveData) {
+      try {
+        // Show loading state
+        this.settings.showNotification('Loading hiker data...', 2000);
+        
+        // Load data from Firebase
+        const firebaseHikers = await fetchHikersFromFirebase();
+        
+        if (firebaseHikers && firebaseHikers.length > 0) {
+          // Use Firebase data
+          this.hikers = firebaseHikers;
+          
+          // Set up real-time updates
+          this.setupFirebaseRealTimeUpdates();
+          
+          this.settings.showNotification('Connected to live data', 3000);
+        } else {
+          // Fall back to sample data if Firebase fetch returns empty
+          this.isUsingLiveData = false;
+          this.hikers = await createSampleHikers(initialSettings.simulation.hikersCount || 10);
+          
+          // Start simulation (only for sample data)
+          this.startSimulation();
+          
+          this.settings.showNotification('No live data available. Using sample data.', 3000);
+        }
+      } catch (error) {
+        console.error('Error loading hikers from Firebase:', error);
+        
+        // Fall back to sample data
+        this.isUsingLiveData = false;
+        this.hikers = await createSampleHikers(initialSettings.simulation.hikersCount || 10);
+        
+        // Start simulation (only for sample data)
+        this.startSimulation();
+        
+        this.settings.showNotification('Error connecting to live data. Using sample data.', 3000);
+      }
+    } else {
+      // Use sample data
+      this.hikers = await createSampleHikers(initialSettings.simulation.hikersCount || 10);
+      
+      // Start simulation
+      this.startSimulation();
+      
+      this.settings.showNotification('Using sample data', 2000);
+    }
     
     // Render initial state
     this.renderAll();
     
-    // Start simulation
-    this.startSimulation();
-    
     return this;
+  }
+
+  /**
+   * Set up Firebase real-time updates
+   */
+  setupFirebaseRealTimeUpdates() {
+    // Clear any existing subscription
+    if (this.firebaseUnsubscribe) {
+      this.firebaseUnsubscribe();
+      this.firebaseUnsubscribe = null;
+    }
+    
+    try {
+      // Subscribe to real-time updates
+      this.firebaseUnsubscribe = listenForHikersUpdates((updatedHikers) => {
+        // Log the data we received
+        console.log('Received Firebase update with hikers:', updatedHikers);
+        
+        if (!updatedHikers || updatedHikers.length === 0) {
+          this.settings.showNotification('Received empty update from Firebase', 3000);
+          return;
+        }
+        
+        // Update hikers data
+        this.hikers = updatedHikers;
+        
+        // Re-render the UI
+        this.renderAll();
+        
+        // Check notifications
+        this.checkNotifications();
+      });
+      
+      console.log('Firebase real-time updates set up successfully');
+    } catch (error) {
+      console.error('Error setting up Firebase real-time updates:', error);
+      this.settings.showNotification('Error connecting to Firebase', 3000);
+    }
   }
 
   /**
@@ -129,21 +226,49 @@ class HikerTrackingApp {
 
   /**
    * Handle hiker click events
-   * @param {Object} hiker - The hiker that was clicked
+   * @param {Object|string|number} hikerOrId - The hiker that was clicked or its ID
    */
-  handleHikerClick(hiker) {
+  handleHikerClick(hikerOrId) {
+    console.log('handleHikerClick called with:', hikerOrId);
+    
+    let hiker;
+    
+    // Check if we received a hiker object or just an ID
+    if (typeof hikerOrId === 'object' && hikerOrId !== null) {
+      hiker = hikerOrId;
+    } else {
+      // We received an ID, find the hiker
+      const hikerId = hikerOrId;
+      hiker = this.hikers.find(h => h.id == hikerId);
+      
+      if (!hiker) {
+        console.error(`Hiker with ID ${hikerId} not found`);
+        return;
+      }
+    }
+    
+    console.log('Opening modal for hiker:', hiker);
+    
+    // Open the modal with the hiker's data
     this.modal.openModal(hiker);
+    
+    // Center the map on the hiker
     this.map.centerOnHiker(hiker.id);
   }
 
   /**
    * Handle SOS actions (marking as handled or emergency services)
    * @param {string|number} hikerId - Hiker ID
-   * @param {string} action - Action type ('handled' or 'emergency')
+   * @param {string} action - Action type ('handled', 'emergency', or 'reset')
    */
   handleSosAction(hikerId, action) {
+    console.log(`SOS action requested: ${action} for hiker ${hikerId}`);
+    
     const hiker = this.hikers.find(h => h.id === hikerId);
-    if (!hiker) return;
+    if (!hiker) {
+      console.error(`Hiker with ID ${hikerId} not found for SOS action ${action}`);
+      return;
+    }
     
     let actionTaken = false;
     let message = '';
@@ -154,11 +279,40 @@ class HikerTrackingApp {
     } else if (action === 'emergency') {
       actionTaken = hiker.dispatchEmergencyServices();
       message = `Emergency services dispatched for ${hiker.name}`;
+    } else if (action === 'reset') {
+      console.log('Attempting to reset SOS status for hiker:', hiker);
+      actionTaken = hiker.resetSosStatus();
+      message = `SOS for ${hiker.name} has been cleared`;
+      console.log('Reset SOS result:', actionTaken, 'New hiker state:', hiker);
     }
     
     if (actionTaken) {
       // Show notification
       this.settings.showNotification(message, 3000);
+      
+      // Update data in Firebase if using live data
+      if (this.isUsingLiveData) {
+        console.log(`Updating Firebase for ${action} action:`, {
+          hikerId,
+          sosActive: action !== 'reset',
+          sosHandled: action === 'handled' || action === 'emergency', 
+          emergency: action === 'emergency',
+          reset: action === 'reset'
+        });
+        
+        updateHikerSosStatus(
+          hikerId, 
+          action !== 'reset', // SOS is active unless resetting
+          action === 'handled' || action === 'emergency', // Whether handled
+          action === 'emergency', // Whether emergency services dispatched
+          action === 'reset' // Whether to reset all SOS statuses
+        ).then(() => {
+          console.log(`Firebase SOS update successful for action: ${action}`);
+        }).catch(error => {
+          console.error('Error updating SOS status in Firebase:', error);
+          this.settings.showNotification('Failed to update status in database', 3000);
+        });
+      }
       
       // Refresh the sidebar to show updated SOS status
       this.sidebar.updateSidebar(this.hikers);
@@ -168,6 +322,8 @@ class HikerTrackingApp {
       
       // Apply special marker style for handled SOS
       this.updateMarkerStyle(hiker);
+    } else {
+      console.warn(`No action taken for ${action} on hiker ${hikerId}`);
     }
   }
 
@@ -297,6 +453,93 @@ class HikerTrackingApp {
     // Render and restart
     this.renderAll();
     this.startSimulation();
+  }
+
+  /**
+   * Handle data source change (Firebase vs Simulation)
+   * @param {boolean} useFirebase - Whether to use Firebase data
+   */
+  async handleDataSourceChange(useFirebase) {
+    // Don't do anything if the data source hasn't changed
+    if (this.isUsingLiveData === useFirebase) return;
+    
+    // Stop any existing data fetching
+    this.stopSimulation();
+    if (this.firebaseUnsubscribe) {
+      this.firebaseUnsubscribe();
+      this.firebaseUnsubscribe = null;
+    }
+    
+    this.isUsingLiveData = useFirebase;
+    
+    // Show loading state
+    this.settings.showNotification(`Switching to ${useFirebase ? 'live' : 'simulated'} data...`, 2000);
+    
+    try {
+      if (useFirebase) {
+        // Switch to Firebase data
+        const firebaseHikers = await fetchHikersFromFirebase();
+        
+        if (firebaseHikers && firebaseHikers.length > 0) {
+          this.hikers = firebaseHikers;
+          
+          // Set up real-time updates
+          this.setupFirebaseRealTimeUpdates();
+          
+          this.settings.showNotification('Connected to live data', 3000);
+        } else {
+          throw new Error('No data available from Firebase');
+        }
+      } else {
+        // Switch to simulated data
+        const currentSettings = this.settings.getSettings();
+        this.hikers = await createSampleHikers(currentSettings.simulation.hikersCount);
+        
+        // Start the simulation
+        this.startSimulation();
+        
+        this.settings.showNotification('Using simulated data', 3000);
+      }
+      
+      // Render the new data
+      this.renderAll();
+    } catch (error) {
+      console.error('Error switching data source:', error);
+      
+      // If failed switching to Firebase, revert to simulation
+      if (useFirebase) {
+        this.isUsingLiveData = false;
+        
+        // Update the toggle in settings
+        const firebaseToggle = document.getElementById('use-firebase');
+        if (firebaseToggle) {
+          firebaseToggle.checked = false;
+          
+          // Update the settings object
+          const currentSettings = this.settings.getSettings();
+          if (currentSettings.dataSource) {
+            currentSettings.dataSource.useFirebase = false;
+          } else {
+            currentSettings.dataSource = { useFirebase: false };
+          }
+          
+          // Save the updated settings
+          localStorage.setItem('hikerTrackerSettings', JSON.stringify(currentSettings));
+        }
+        
+        // Load simulated data
+        const currentSettings = this.settings.getSettings();
+        this.hikers = await createSampleHikers(currentSettings.simulation.hikersCount);
+        
+        // Start the simulation
+        this.startSimulation();
+        
+        this.settings.showNotification('Failed to connect to live data. Using simulation instead.', 4000);
+        
+        // Render the simulated data
+        this.renderAll();
+      }
+    }
   }
 }
 

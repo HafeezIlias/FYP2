@@ -97,12 +97,33 @@ class MapComponent {
    * @param {string|number} hikerId - The ID of the hiker to center on
    */
   centerOnHiker(hikerId) {
-    if (!this.hikers) return;
+    if (!this.hikers) {
+      console.warn('No hikers data available for centering');
+      return;
+    }
     
     const hiker = this.hikers.find(h => h.id === hikerId);
-    if (hiker && this.map) {
-      this.map.setView([hiker.lat, hiker.lon], 15);
-      this.trackingHikerId = hikerId;
+    if (!hiker) {
+      console.warn(`Hiker with ID ${hikerId} not found`);
+      return;
+    }
+    
+    if (this.map) {
+      try {
+        const lat = parseFloat(hiker.lat);
+        const lon = parseFloat(hiker.lon);
+        
+        if (isNaN(lat) || isNaN(lon)) {
+          console.warn(`Invalid coordinates for hiker ${hikerId}:`, hiker.lat, hiker.lon);
+          return;
+        }
+        
+        console.log(`Centering map on hiker ${hikerId} at ${lat},${lon}`);
+        this.map.setView([lat, lon], 15);
+        this.trackingHikerId = hikerId;
+      } catch (error) {
+        console.error(`Error centering on hiker ${hikerId}:`, error);
+      }
     }
   }
 
@@ -121,10 +142,30 @@ class MapComponent {
    * Fit the map to show all hikers
    */
   fitToAllHikers() {
-    if (!this.hikers || this.hikers.length === 0) return;
+    if (!this.hikers || this.hikers.length === 0) {
+      console.warn('No hikers data available for fitting bounds');
+      return;
+    }
 
-    const bounds = L.latLngBounds(this.hikers.map(h => [h.lat, h.lon]));
-    this.map.fitBounds(bounds, { padding: [50, 50] });
+    // Filter out hikers with invalid coordinates
+    const validHikers = this.hikers.filter(h => {
+      const lat = parseFloat(h.lat);
+      const lon = parseFloat(h.lon);
+      return !isNaN(lat) && !isNaN(lon);
+    });
+    
+    if (validHikers.length === 0) {
+      console.warn('No hikers with valid coordinates for fitting bounds');
+      return;
+    }
+
+    try {
+      const bounds = L.latLngBounds(validHikers.map(h => [parseFloat(h.lat), parseFloat(h.lon)]));
+      console.log('Fitting map to bounds:', bounds);
+      this.map.fitBounds(bounds, { padding: [50, 50] });
+    } catch (error) {
+      console.error('Error fitting bounds to hikers:', error);
+    }
   }
 
   /**
@@ -133,25 +174,55 @@ class MapComponent {
    * @param {Function} onMarkerClick - Callback for marker click events
    */
   updateMap(hikers, onMarkerClick) {
-    if (!this.map || !this.markerLayer) return;
+    if (!this.map || !this.markerLayer) {
+      console.error('Map not initialized');
+      return;
+    }
     
     this.hikers = hikers;
     this.markerLayer.clearLayers();
     this.hikerMarkers = {};
     
+    console.log('Updating map with hikers:', hikers);
+    
     hikers.forEach(hiker => {
-      // Create or update marker with enhanced label
-      const marker = L.marker([hiker.lat, hiker.lon], {
-        icon: this.createCustomMarkerIcon(hiker),
-        zIndexOffset: hiker.sos ? 1000 : 0 // SOS markers on top
-      }).addTo(this.markerLayer);
+      // Ensure lat and lon are valid numbers
+      const lat = parseFloat(hiker.lat);
+      const lon = parseFloat(hiker.lon);
       
-      if (onMarkerClick) {
-        marker.on('click', () => onMarkerClick(hiker));
+      // Skip invalid coordinates
+      if (isNaN(lat) || isNaN(lon)) {
+        console.warn(`Invalid coordinates for hiker ${hiker.id}:`, hiker.lat, hiker.lon);
+        return;
       }
       
-      this.hikerMarkers[hiker.id] = marker;
+      console.log(`Creating marker for ${hiker.id} at ${lat},${lon}`);
+      
+      try {
+        // Create or update marker with enhanced label
+        const marker = L.marker([lat, lon], {
+          icon: this.createCustomMarkerIcon(hiker),
+          zIndexOffset: hiker.sos ? 1000 : 0 // SOS markers on top
+        }).addTo(this.markerLayer);
+        
+        if (onMarkerClick) {
+          marker.on('click', () => onMarkerClick(hiker));
+        }
+        
+        this.hikerMarkers[hiker.id] = marker;
+      } catch (error) {
+        console.error(`Error creating marker for hiker ${hiker.id}:`, error);
+      }
     });
+    
+    // If we have at least one hiker, fit bounds if no tracking
+    if (hikers.length > 0 && this.trackingHikerId === null) {
+      try {
+        this.fitToAllHikers();
+      } catch (error) {
+        console.error('Error fitting bounds to hikers:', error);
+      }
+    }
     
     // Follow tracked hiker if needed
     if (this.trackingHikerId !== null) {

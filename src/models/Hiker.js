@@ -139,6 +139,24 @@ class Hiker {
     if (this.sosHandled) return 'Handled';
     return 'Pending';
   }
+  
+  /**
+   * Reset SOS status
+   * @returns {boolean} Whether the status was successfully reset
+   */
+  resetSosStatus() {
+    if (!this.sos) return false; // Already not in SOS state
+    
+    this.sos = false;
+    this.status = 'Active';
+    this.sosHandled = false;
+    this.sosHandledTime = null;
+    this.sosEmergencyDispatched = false;
+    this.sosEmergencyTime = null;
+    this.sosNotified = false;
+    
+    return true;
+  }
 }
 
 // Export the Hiker model

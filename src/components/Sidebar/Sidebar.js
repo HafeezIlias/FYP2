@@ -66,6 +66,7 @@ class SidebarComponent {
   createHikerCard(hiker) {
     const card = document.createElement('div');
     card.className = `hiker-card${hiker.sos ? ' sos' : ''}`;
+    card.setAttribute('data-hiker-id', hiker.id);
     
     const initials = hiker.name.split(' ').map(n => n[0]).join('');
     
@@ -97,7 +98,10 @@ class SidebarComponent {
     `;
     
     if (this.onHikerClick) {
-      card.addEventListener('click', () => this.onHikerClick(hiker));
+      card.addEventListener('click', () => {
+        console.log('Hiker card clicked:', hiker);
+        this.onHikerClick(hiker);
+      });
     }
     
     return card;
@@ -209,7 +213,8 @@ class SidebarComponent {
 
     card.addEventListener('click', () => {
       if (this.onHikerClick) {
-        this.onHikerClick(hiker.id);
+        console.log('Hiker card clicked from renderHikerCard:', hiker);
+        this.onHikerClick(hiker);
       }
     });
 

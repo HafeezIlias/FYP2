@@ -26,6 +26,7 @@ class ModalComponent {
     this.sosActionsId = 'sos-actions';
     this.markSosHandledBtnId = 'mark-sos-handled';
     this.markSosEmergencyBtnId = 'mark-sos-emergency';
+    this.resetSosBtnId = 'reset-sos';
     
     this.activeHikerId = null;
     this.activeHiker = null;
@@ -37,8 +38,9 @@ class ModalComponent {
    * @param {Function} onSendMessage - Callback for send message button
    * @param {Function} onMarkSosHandled - Callback for mark SOS handled button
    * @param {Function} onMarkSosEmergency - Callback for emergency services button
+   * @param {Function} onResetSos - Callback for reset SOS button
    */
-  init(onTrackHiker, onSendMessage, onMarkSosHandled, onMarkSosEmergency) {
+  init(onTrackHiker, onSendMessage, onMarkSosHandled, onMarkSosEmergency, onResetSos) {
     // Set up close button
     document.querySelector(`#${this.modalId} .${this.closeBtnClass}`)?.addEventListener('click', () => {
       this.closeModal();
@@ -71,6 +73,16 @@ class ModalComponent {
       if (onMarkSosEmergency && this.activeHiker && this.activeHiker.sos && !this.activeHiker.sosEmergencyDispatched) {
         onMarkSosEmergency(this.activeHikerId);
         this.updateSosStatus(this.activeHiker);
+      }
+    });
+    
+    // Set up Reset SOS button
+    document.getElementById(this.resetSosBtnId)?.addEventListener('click', () => {
+      if (onResetSos && this.activeHiker && this.activeHiker.sos) {
+        console.log('Reset SOS button clicked for hiker:', this.activeHikerId);
+        onResetSos(this.activeHikerId);
+        // Don't call updateSosStatus here as it may not be updated yet
+        // The UI will be updated through the real-time listener
       }
     });
     
@@ -125,6 +137,13 @@ class ModalComponent {
     const sosHandledStatus = document.getElementById(this.sosHandledStatusId);
     const markSosHandledBtn = document.getElementById(this.markSosHandledBtnId);
     const markSosEmergencyBtn = document.getElementById(this.markSosEmergencyBtnId);
+    const resetSosBtn = document.getElementById(this.resetSosBtnId);
+    
+    // Ensure all elements exist before proceeding
+    if (!sosStatusContainer || !sosActions) {
+      console.warn('SOS container elements not found in the modal');
+      return;
+    }
     
     if (!hiker.sos) {
       // Hide SOS elements if no SOS
@@ -137,37 +156,56 @@ class ModalComponent {
     sosStatusContainer.style.display = 'flex';
     sosActions.style.display = 'flex';
     
-    // Update status text
-    const statusText = hiker.getSosStatusText();
-    sosHandledStatus.textContent = statusText;
+    // Update status text if element exists
+    if (sosHandledStatus) {
+      const statusText = hiker.getSosStatusText ? hiker.getSosStatusText() : 'SOS Active';
+      sosHandledStatus.textContent = statusText;
+      
+      // Update status classes
+      if (hiker.sosHandled || hiker.sosEmergencyDispatched) {
+        sosHandledStatus.classList.add('handled');
+        sosHandledStatus.classList.remove('pending');
+      } else {
+        sosHandledStatus.classList.remove('handled');
+        sosHandledStatus.classList.add('pending');
+      }
+    }
     
-    // Update icon
+    // Update icon if it exists
     const statusIcon = sosStatusContainer.querySelector('.detail-icon');
-    if (hiker.sosHandled || hiker.sosEmergencyDispatched) {
-      statusIcon.classList.add('handled');
-      sosHandledStatus.classList.add('handled');
-      sosHandledStatus.classList.remove('pending');
-    } else {
-      statusIcon.classList.remove('handled');
-      sosHandledStatus.classList.remove('handled');
-      sosHandledStatus.classList.add('pending');
+    if (statusIcon) {
+      if (hiker.sosHandled || hiker.sosEmergencyDispatched) {
+        statusIcon.classList.add('handled');
+      } else {
+        statusIcon.classList.remove('handled');
+      }
     }
     
-    // Update button states
-    if (hiker.sosHandled) {
-      markSosHandledBtn.classList.add('disabled');
-      markSosHandledBtn.disabled = true;
-    } else {
-      markSosHandledBtn.classList.remove('disabled');
-      markSosHandledBtn.disabled = false;
+    // Update button states if buttons exist
+    if (markSosHandledBtn) {
+      if (hiker.sosHandled) {
+        markSosHandledBtn.classList.add('disabled');
+        markSosHandledBtn.disabled = true;
+      } else {
+        markSosHandledBtn.classList.remove('disabled');
+        markSosHandledBtn.disabled = false;
+      }
     }
     
-    if (hiker.sosEmergencyDispatched) {
-      markSosEmergencyBtn.classList.add('disabled');
-      markSosEmergencyBtn.disabled = true;
-    } else {
-      markSosEmergencyBtn.classList.remove('disabled');
-      markSosEmergencyBtn.disabled = false;
+    if (markSosEmergencyBtn) {
+      if (hiker.sosEmergencyDispatched) {
+        markSosEmergencyBtn.classList.add('disabled');
+        markSosEmergencyBtn.disabled = true;
+      } else {
+        markSosEmergencyBtn.classList.remove('disabled');
+        markSosEmergencyBtn.disabled = false;
+      }
+    }
+    
+    // Enable reset button as long as SOS is active
+    if (resetSosBtn) {
+      resetSosBtn.classList.remove('disabled');
+      resetSosBtn.disabled = false;
     }
   }
 

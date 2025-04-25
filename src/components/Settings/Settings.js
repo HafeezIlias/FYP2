@@ -29,6 +29,9 @@ class SettingsComponent {
         sosAlerts: true,
         batteryAlerts: true,
         batteryThreshold: 20
+      },
+      dataSource: {
+        useFirebase: true
       }
     };
     
@@ -156,6 +159,17 @@ class SettingsComponent {
         this.callbacks.onBatteryThresholdChange(thresholdValue);
       }
     });
+    
+    // Firebase data source toggle
+    document.getElementById('use-firebase')?.addEventListener('change', (e) => {
+      if (!this.settings.dataSource) {
+        this.settings.dataSource = {};
+      }
+      this.settings.dataSource.useFirebase = e.target.checked;
+      if (this.callbacks.onDataSourceChange) {
+        this.callbacks.onDataSourceChange(e.target.checked);
+      }
+    });
   }
 
   /**
@@ -215,6 +229,12 @@ class SettingsComponent {
     if (thresholdSlider) {
       thresholdSlider.value = this.settings.notifications.batteryThreshold;
       document.getElementById('battery-threshold-value').textContent = `${this.settings.notifications.batteryThreshold}%`;
+    }
+    
+    // Data source settings
+    const useFirebaseToggle = document.getElementById('use-firebase');
+    if (useFirebaseToggle) {
+      useFirebaseToggle.checked = this.settings.dataSource?.useFirebase ?? true;
     }
   }
 
