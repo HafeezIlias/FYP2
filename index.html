@@ -72,6 +72,14 @@
             <span id="modal-status" class="detail-value"></span>
           </div>
         </div>
+        <!-- SOS Status Container (initially hidden) -->
+        <div id="sos-status-container" class="hiker-detail" style="display: none;">
+          <div class="detail-icon"><i class="fas fa-exclamation-triangle"></i></div>
+          <div class="detail-info">
+            <span class="detail-label">SOS Status</span>
+            <span id="sos-handled-status" class="detail-value"></span>
+          </div>
+        </div>
         <div class="hiker-detail">
           <div class="detail-icon"><i class="fas fa-battery-half"></i></div>
           <div class="detail-info">
@@ -98,6 +106,12 @@
             <span id="modal-coords" class="detail-value"></span>
           </div>
         </div>
+      </div>
+      <!-- SOS Action Buttons Container (initially hidden) -->
+      <div id="sos-actions" class="modal-sos-actions" style="display: none;">
+        <button id="mark-sos-handled" class="action-btn sos-btn"><i class="fas fa-check-circle"></i> Mark as Handled</button>
+        <button id="mark-sos-emergency" class="action-btn emergency-btn"><i class="fas fa-ambulance"></i> Dispatch Emergency Services</button>
+        <button id="reset-sos" class="action-btn reset-btn"><i class="fas fa-times-circle"></i> Clear SOS</button>
       </div>
       <div class="modal-actions">
         <button class="action-btn primary-btn" id="track-hiker">Track Hiker</button>
@@ -189,6 +203,19 @@
             </div>
           </div>
         </div>
+        
+        <div class="settings-section">
+          <h4>Data Source</h4>
+          <div class="setting-item">
+            <div class="toggle-container">
+              <label for="use-firebase">Use Live Data:</label>
+              <label class="toggle">
+                <input type="checkbox" id="use-firebase" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="modal-actions">
         <button class="action-btn primary-btn" id="save-settings">Save Settings</button>
@@ -200,7 +227,7 @@
   <!-- External Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   
-  <!-- Application Scripts (Module type to support ES6 imports) -->
-  <script type="module" src="src/app.js"></script>
+  <!-- Application Script (bundled with webpack) -->
+  <script src="dist/bundle.js"></script>
 </body>
 </html> 
