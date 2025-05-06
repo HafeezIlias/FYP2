@@ -33,12 +33,12 @@ export function getBatteryColor(battery) {
 
 /**
  * Get the appropriate Font Awesome icon for a hiker status
- * @param {string} status - Hiker status (Moving, Resting, SOS)
+ * @param {string} status - Hiker status (Active, Resting, SOS)
  * @returns {string} Font Awesome class name
  */
 export function getStatusIcon(status) {
   switch(status) {
-    case 'Moving': return 'fa-person-walking';
+    case 'Active': return 'fa-person-walking';
     case 'Resting': return 'fa-person';
     case 'SOS': return 'fa-exclamation-triangle';
     default: return 'fa-person';
@@ -81,7 +81,7 @@ export function createSampleHikers(count = 10, centerCoords = [3.139, 101.6869])
       const lat = centerCoords[0] + (Math.random() - 0.5) * 0.05;
       const lon = centerCoords[1] + (Math.random() - 0.5) * 0.05;
       const battery = 50 + Math.random() * 50; // 50-100%
-      return new Hiker(index, name, lat, lon, 'Moving', battery);
+      return new Hiker(index, name, lat, lon, 'Active', battery);
     });
   });
 } 

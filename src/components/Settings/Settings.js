@@ -21,6 +21,7 @@ class SettingsComponent {
         defaultZoom: 12
       },
       simulation: {
+        enabled: false,
         speed: 3000,
         hikersCount: 10,
         autoSos: true
@@ -49,127 +50,171 @@ class SettingsComponent {
    * @param {Function} callbacks.onZoomChange - Called when default zoom changes
    * @param {Function} callbacks.onSimulationSpeedChange - Called when simulation speed changes
    * @param {Function} callbacks.onHikersCountChange - Called when hikers count changes
+   * @param {Function} callbacks.onSimulationToggle - Called when simulation is toggled on/off
    */
   init(callbacks = {}) {
-    this.callbacks = callbacks;
-    
-    // Set up event listeners
-    this.setupEventListeners();
-    
-    // Initialize UI with current settings
-    this.updateUI();
-    
-    return this;
+    try {
+      this.callbacks = callbacks || {};
+      
+      // Set up event listeners
+      this.setupEventListeners();
+      
+      // Initialize UI with current settings
+      setTimeout(() => {
+        try {
+          this.updateUI();
+        } catch (error) {
+          console.warn('Error updating UI after initialization:', error);
+        }
+      }, 0);
+      
+      return this;
+    } catch (error) {
+      console.error('Error initializing settings component:', error);
+      return this;
+    }
   }
 
   /**
    * Setup event listeners for settings controls
    */
   setupEventListeners() {
-    // Settings button click (open modal)
-    document.getElementById(this.settingsBtnId)?.addEventListener('click', () => {
-      this.openSettingsModal();
-    });
-    
-    // Close button click
-    document.getElementById(this.closeBtnId)?.addEventListener('click', () => {
-      this.closeSettingsModal();
-    });
-    
-    // Save button click
-    document.getElementById(this.saveBtnId)?.addEventListener('click', () => {
-      this.saveSettings();
-      this.closeSettingsModal();
-    });
-    
-    // Reset button click
-    document.getElementById(this.resetBtnId)?.addEventListener('click', () => {
-      this.resetSettings();
-    });
-    
-    // Map style change
-    document.getElementById('map-style')?.addEventListener('change', (e) => {
-      const newStyle = e.target.value;
-      this.settings.map.style = newStyle;
-      if (this.callbacks.onMapStyleChange) {
-        this.callbacks.onMapStyleChange(newStyle);
-      }
-    });
-    
-    // Default zoom change
-    document.getElementById('default-zoom')?.addEventListener('input', (e) => {
-      const zoomValue = parseInt(e.target.value);
-      document.getElementById('zoom-value').textContent = zoomValue;
-      this.settings.map.defaultZoom = zoomValue;
-      if (this.callbacks.onZoomChange) {
-        this.callbacks.onZoomChange(zoomValue);
-      }
-    });
-    
-    // Simulation speed change
-    document.getElementById('simulation-speed')?.addEventListener('input', (e) => {
-      const speedValue = parseInt(e.target.value);
-      document.getElementById('speed-value').textContent = `${speedValue}ms`;
-      this.settings.simulation.speed = speedValue;
-      if (this.callbacks.onSimulationSpeedChange) {
-        this.callbacks.onSimulationSpeedChange(speedValue);
-      }
-    });
-    
-    // Hikers count change
-    document.getElementById('hikers-count')?.addEventListener('input', (e) => {
-      const countValue = parseInt(e.target.value);
-      document.getElementById('hikers-count-value').textContent = countValue;
-      this.settings.simulation.hikersCount = countValue;
-      if (this.callbacks.onHikersCountChange) {
-        this.callbacks.onHikersCountChange(countValue);
-      }
-    });
-    
-    // Auto SOS toggle
-    document.getElementById('auto-sos')?.addEventListener('change', (e) => {
-      this.settings.simulation.autoSos = e.target.checked;
-      if (this.callbacks.onAutoSosChange) {
-        this.callbacks.onAutoSosChange(e.target.checked);
-      }
-    });
-    
-    // SOS alerts toggle
-    document.getElementById('sos-alerts')?.addEventListener('change', (e) => {
-      this.settings.notifications.sosAlerts = e.target.checked;
-      if (this.callbacks.onSosAlertsChange) {
-        this.callbacks.onSosAlertsChange(e.target.checked);
-      }
-    });
-    
-    // Battery alerts toggle
-    document.getElementById('battery-alerts')?.addEventListener('change', (e) => {
-      this.settings.notifications.batteryAlerts = e.target.checked;
-      if (this.callbacks.onBatteryAlertsChange) {
-        this.callbacks.onBatteryAlertsChange(e.target.checked);
-      }
-    });
-    
-    // Battery threshold change
-    document.getElementById('battery-threshold')?.addEventListener('input', (e) => {
-      const thresholdValue = parseInt(e.target.value);
-      document.getElementById('battery-threshold-value').textContent = `${thresholdValue}%`;
-      this.settings.notifications.batteryThreshold = thresholdValue;
-      if (this.callbacks.onBatteryThresholdChange) {
-        this.callbacks.onBatteryThresholdChange(thresholdValue);
-      }
-    });
-    
-    // Firebase data source toggle
-    document.getElementById('use-firebase')?.addEventListener('change', (e) => {
-      if (!this.settings.dataSource) {
-        this.settings.dataSource = {};
-      }
-      this.settings.dataSource.useFirebase = e.target.checked;
-      if (this.callbacks.onDataSourceChange) {
-        this.callbacks.onDataSourceChange(e.target.checked);
-      }
-    });
+    try {
+      // Settings button click (open modal)
+      document.getElementById(this.settingsBtnId)?.addEventListener('click', () => {
+        this.openSettingsModal();
+      });
+      
+      // Close button click
+      document.getElementById(this.closeBtnId)?.addEventListener('click', () => {
+        this.closeSettingsModal();
+      });
+      
+      // Save button click
+      document.getElementById(this.saveBtnId)?.addEventListener('click', () => {
+        this.saveSettings();
+        this.closeSettingsModal();
+      });
+      
+      // Reset button click
+      document.getElementById(this.resetBtnId)?.addEventListener('click', () => {
+        this.resetSettings();
+      });
+      
+      // Map style change
+      document.getElementById('map-style')?.addEventListener('change', (e) => {
+        const newStyle = e.target.value;
+        this.settings.map.style = newStyle;
+        if (this.callbacks?.onMapStyleChange) {
+          this.callbacks.onMapStyleChange(newStyle);
+        }
+      });
+      
+      // Default zoom change
+      document.getElementById('default-zoom')?.addEventListener('input', (e) => {
+        const zoomValue = parseInt(e.target.value);
+        const zoomElement = document.getElementById('zoom-value');
+        if (zoomElement) {
+          zoomElement.textContent = zoomValue;
+        }
+        this.settings.map.defaultZoom = zoomValue;
+        if (this.callbacks?.onZoomChange) {
+          this.callbacks.onZoomChange(zoomValue);
+        }
+      });
+      
+      // Simulation toggle
+      document.getElementById('enable-simulation')?.addEventListener('change', (e) => {
+        const isEnabled = e.target.checked;
+        this.settings.simulation.enabled = isEnabled;
+        
+        // Show/hide simulation settings based on toggle state
+        const simulationSettings = document.getElementById('simulation-settings');
+        if (simulationSettings) {
+          simulationSettings.style.display = isEnabled ? 'block' : 'none';
+        }
+        
+        if (this.callbacks?.onSimulationToggle) {
+          this.callbacks.onSimulationToggle(isEnabled);
+        }
+      });
+      
+      // Simulation speed change
+      document.getElementById('simulation-speed')?.addEventListener('input', (e) => {
+        const speedValue = parseInt(e.target.value);
+        const speedElement = document.getElementById('speed-value');
+        if (speedElement) {
+          speedElement.textContent = `${speedValue}ms`;
+        }
+        this.settings.simulation.speed = speedValue;
+        if (this.callbacks?.onSimulationSpeedChange) {
+          this.callbacks.onSimulationSpeedChange(speedValue);
+        }
+      });
+      
+      // Hikers count change
+      document.getElementById('hikers-count')?.addEventListener('input', (e) => {
+        const countValue = parseInt(e.target.value);
+        const countElement = document.getElementById('hikers-count-value');
+        if (countElement) {
+          countElement.textContent = countValue;
+        }
+        this.settings.simulation.hikersCount = countValue;
+        if (this.callbacks?.onHikersCountChange) {
+          this.callbacks.onHikersCountChange(countValue);
+        }
+      });
+      
+      // Auto SOS toggle
+      document.getElementById('auto-sos')?.addEventListener('change', (e) => {
+        this.settings.simulation.autoSos = e.target.checked;
+        if (this.callbacks?.onAutoSosChange) {
+          this.callbacks.onAutoSosChange(e.target.checked);
+        }
+      });
+      
+      // SOS alerts toggle
+      document.getElementById('sos-alerts')?.addEventListener('change', (e) => {
+        this.settings.notifications.sosAlerts = e.target.checked;
+        if (this.callbacks?.onSosAlertsChange) {
+          this.callbacks.onSosAlertsChange(e.target.checked);
+        }
+      });
+      
+      // Battery alerts toggle
+      document.getElementById('battery-alerts')?.addEventListener('change', (e) => {
+        this.settings.notifications.batteryAlerts = e.target.checked;
+        if (this.callbacks?.onBatteryAlertsChange) {
+          this.callbacks.onBatteryAlertsChange(e.target.checked);
+        }
+      });
+      
+      // Battery threshold change
+      document.getElementById('battery-threshold')?.addEventListener('input', (e) => {
+        const thresholdValue = parseInt(e.target.value);
+        const thresholdElement = document.getElementById('battery-threshold-value');
+        if (thresholdElement) {
+          thresholdElement.textContent = `${thresholdValue}%`;
+        }
+        this.settings.notifications.batteryThreshold = thresholdValue;
+        if (this.callbacks?.onBatteryThresholdChange) {
+          this.callbacks.onBatteryThresholdChange(thresholdValue);
+        }
+      });
+      
+      // Firebase data source toggle
+      document.getElementById('use-firebase')?.addEventListener('change', (e) => {
+        if (!this.settings.dataSource) {
+          this.settings.dataSource = {};
+        }
+        this.settings.dataSource.useFirebase = e.target.checked;
+        if (this.callbacks?.onDataSourceChange) {
+          this.callbacks.onDataSourceChange(e.target.checked);
+        }
+      });
+    } catch (error) {
+      console.warn('Error setting up event listeners:', error);
+    }
   }
 
   /**
@@ -197,44 +242,85 @@ class SettingsComponent {
    * Update the UI with current settings values
    */
   updateUI() {
-    // Map settings
-    document.getElementById('map-style').value = this.settings.map.style;
-    
-    const zoomSlider = document.getElementById('default-zoom');
-    if (zoomSlider) {
-      zoomSlider.value = this.settings.map.defaultZoom;
-      document.getElementById('zoom-value').textContent = this.settings.map.defaultZoom;
-    }
-    
-    // Simulation settings
-    const speedSlider = document.getElementById('simulation-speed');
-    if (speedSlider) {
-      speedSlider.value = this.settings.simulation.speed;
-      document.getElementById('speed-value').textContent = `${this.settings.simulation.speed}ms`;
-    }
-    
-    const hikersSlider = document.getElementById('hikers-count');
-    if (hikersSlider) {
-      hikersSlider.value = this.settings.simulation.hikersCount;
-      document.getElementById('hikers-count-value').textContent = this.settings.simulation.hikersCount;
-    }
-    
-    document.getElementById('auto-sos').checked = this.settings.simulation.autoSos;
-    
-    // Notification settings
-    document.getElementById('sos-alerts').checked = this.settings.notifications.sosAlerts;
-    document.getElementById('battery-alerts').checked = this.settings.notifications.batteryAlerts;
-    
-    const thresholdSlider = document.getElementById('battery-threshold');
-    if (thresholdSlider) {
-      thresholdSlider.value = this.settings.notifications.batteryThreshold;
-      document.getElementById('battery-threshold-value').textContent = `${this.settings.notifications.batteryThreshold}%`;
-    }
-    
-    // Data source settings
-    const useFirebaseToggle = document.getElementById('use-firebase');
-    if (useFirebaseToggle) {
-      useFirebaseToggle.checked = this.settings.dataSource?.useFirebase ?? true;
+    try {
+      // Map settings
+      const mapStyleElement = document.getElementById('map-style');
+      if (mapStyleElement) {
+        mapStyleElement.value = this.settings.map.style;
+      }
+      
+      const zoomSlider = document.getElementById('default-zoom');
+      if (zoomSlider) {
+        zoomSlider.value = this.settings.map.defaultZoom;
+        const zoomValue = document.getElementById('zoom-value');
+        if (zoomValue) {
+          zoomValue.textContent = this.settings.map.defaultZoom;
+        }
+      }
+      
+      // Simulation toggle
+      const simulationToggle = document.getElementById('enable-simulation');
+      if (simulationToggle) {
+        simulationToggle.checked = this.settings.simulation.enabled;
+        
+        // Show/hide simulation settings based on toggle state
+        const simulationSettings = document.getElementById('simulation-settings');
+        if (simulationSettings) {
+          simulationSettings.style.display = this.settings.simulation.enabled ? 'block' : 'none';
+        }
+      }
+      
+      // Simulation settings
+      const speedSlider = document.getElementById('simulation-speed');
+      if (speedSlider) {
+        speedSlider.value = this.settings.simulation.speed;
+        const speedValue = document.getElementById('speed-value');
+        if (speedValue) {
+          speedValue.textContent = `${this.settings.simulation.speed}ms`;
+        }
+      }
+      
+      const hikersCountSlider = document.getElementById('hikers-count');
+      if (hikersCountSlider) {
+        hikersCountSlider.value = this.settings.simulation.hikersCount;
+        const hikersCountValue = document.getElementById('hikers-count-value');
+        if (hikersCountValue) {
+          hikersCountValue.textContent = this.settings.simulation.hikersCount;
+        }
+      }
+      
+      const autoSosToggle = document.getElementById('auto-sos');
+      if (autoSosToggle) {
+        autoSosToggle.checked = this.settings.simulation.autoSos;
+      }
+      
+      // Notification settings
+      const sosAlertsToggle = document.getElementById('sos-alerts');
+      if (sosAlertsToggle) {
+        sosAlertsToggle.checked = this.settings.notifications.sosAlerts;
+      }
+      
+      const batteryAlertsToggle = document.getElementById('battery-alerts');
+      if (batteryAlertsToggle) {
+        batteryAlertsToggle.checked = this.settings.notifications.batteryAlerts;
+      }
+      
+      const batteryThresholdSlider = document.getElementById('battery-threshold');
+      if (batteryThresholdSlider) {
+        batteryThresholdSlider.value = this.settings.notifications.batteryThreshold;
+        const batteryThresholdValue = document.getElementById('battery-threshold-value');
+        if (batteryThresholdValue) {
+          batteryThresholdValue.textContent = `${this.settings.notifications.batteryThreshold}%`;
+        }
+      }
+      
+      // Data source settings
+      const useFirebaseToggle = document.getElementById('use-firebase');
+      if (useFirebaseToggle) {
+        useFirebaseToggle.checked = this.settings.dataSource?.useFirebase ?? true;
+      }
+    } catch (error) {
+      console.warn('Error updating UI with settings:', error);
     }
   }
 
@@ -340,6 +426,17 @@ class SettingsComponent {
    */
   getSettings() {
     return this.settings;
+  }
+
+  /**
+   * Open the settings modal (public method)
+   */
+  openModal() {
+    try {
+      this.openSettingsModal();
+    } catch (error) {
+      console.warn('Error opening settings modal from public method:', error);
+    }
   }
 }
 

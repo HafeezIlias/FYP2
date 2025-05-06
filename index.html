@@ -61,7 +61,9 @@
   <div id="hiker-modal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 id="modal-name"></h3>
+        <div class="editable-name-container">
+          <h3 id="modal-name" class="editable-name" contenteditable="true" title="Click to edit name"></h3>
+        </div>
         <button class="close-btn"><i class="fas fa-times"></i></button>
       </div>
       <div class="modal-body">
@@ -149,29 +151,45 @@
         </div>
         
         <div class="settings-section">
-          <h4>Simulation</h4>
+          <h4>Data Source</h4>
           <div class="setting-item">
-            <label for="simulation-speed">Simulation Speed:</label>
+            <div class="toggle-container">
+              <label for="enable-simulation">Enable Simulation:</label>
+              <label class="toggle">
+                <input type="checkbox" id="enable-simulation">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <small class="setting-description">Turn Off to use live data from Firebase</small>
+          </div>
+        </div>
+        
+        <!-- Simulation Settings (conditionally visible) -->
+        <div id="simulation-settings" class="settings-section" style="display: none;">
+          <h4>Simulation Settings</h4>
+          <div class="setting-item">
+            <label for="simulation-speed">Update Interval:</label>
             <div class="range-container">
-              <input type="range" id="simulation-speed" min="1000" max="5000" step="500" value="3000" class="settings-range">
+              <input type="range" id="simulation-speed" min="1000" max="10000" step="500" value="3000" class="settings-range">
               <span id="speed-value">3000ms</span>
             </div>
           </div>
           <div class="setting-item">
             <label for="hikers-count">Number of Hikers:</label>
             <div class="range-container">
-              <input type="range" id="hikers-count" min="5" max="20" value="10" class="settings-range">
+              <input type="range" id="hikers-count" min="1" max="30" value="10" class="settings-range">
               <span id="hikers-count-value">10</span>
             </div>
           </div>
           <div class="setting-item">
             <div class="toggle-container">
-              <label for="auto-sos">Auto SOS Events:</label>
+              <label for="auto-sos">Random SOS Events:</label>
               <label class="toggle">
                 <input type="checkbox" id="auto-sos" checked>
                 <span class="toggle-slider"></span>
               </label>
             </div>
+            <small class="setting-description">Randomly generate SOS events during simulation</small>
           </div>
         </div>
         
@@ -200,19 +218,6 @@
             <div class="range-container">
               <input type="range" id="battery-threshold" min="5" max="50" value="20" class="settings-range">
               <span id="battery-threshold-value">20%</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="settings-section">
-          <h4>Data Source</h4>
-          <div class="setting-item">
-            <div class="toggle-container">
-              <label for="use-firebase">Use Live Data:</label>
-              <label class="toggle">
-                <input type="checkbox" id="use-firebase" checked>
-                <span class="toggle-slider"></span>
-              </label>
             </div>
           </div>
         </div>

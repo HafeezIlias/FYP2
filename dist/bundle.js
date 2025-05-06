@@ -18908,9 +18908,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 /* harmony import */ var _utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/helpers.js */ "./src/utils/helpers.js");
+/* harmony import */ var _utils_firebase_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/firebase.js */ "./src/utils/firebase.js");
 /**
  * Modal Component - Handles the hiker detail modal
  */
+
 
 
 class ModalComponent {
@@ -18940,6 +18942,7 @@ class ModalComponent {
     
     this.activeHikerId = null;
     this.activeHiker = null;
+    this.originalNodeName = ''; // Store original name to detect changes
   }
 
   /**
@@ -18996,10 +18999,79 @@ class ModalComponent {
       }
     });
     
+    // Set up editable name handling
+    this.setupEditableName();
+    
     // Add "Live" indicator
     this.addUpdateIndicator();
     
     return this;
+  }
+  
+  /**
+   * Show a toast notification
+   * @param {string} message - The message to display
+   * @param {boolean} isError - Whether this is an error notification
+   */
+  showToast(message, isError = false) {
+    // Remove any existing toasts
+    const existingToast = document.querySelector('.toast');
+    if (existingToast) {
+      existingToast.remove();
+    }
+    
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `toast${isError ? ' error' : ''}`;
+    toast.innerHTML = `
+      <i class="fas fa-${isError ? 'exclamation-circle' : 'check-circle'}"></i>
+      <span>${message}</span>
+    `;
+    
+    // Add to DOM
+    document.body.appendChild(toast);
+    
+    // Remove after animation completes
+    setTimeout(() => {
+      toast.remove();
+    }, 3000);
+  }
+  
+  /**
+   * Update node name in Firebase
+   * @param {string} newName - The new name for the node
+   */
+  async updateNodeName(newName) {
+    if (!this.activeHikerId) return;
+    
+    try {
+      console.log(`Updating node ${this.activeHikerId} name to: ${newName}`);
+      const success = await (0,_utils_firebase_js__WEBPACK_IMPORTED_MODULE_1__.updateNodeName)(this.activeHikerId, newName);
+      
+      if (success) {
+        console.log(`Node name updated to: ${newName}`);
+        this.showToast(`Node name updated to: ${newName}`);
+        // UI will update through real-time listener
+      } else {
+        console.error('Failed to update node name');
+        this.showToast('Failed to update the node name', true);
+        
+        // Revert to original name in UI
+        const nameElement = document.getElementById(this.nameId);
+        if (nameElement) {
+          nameElement.textContent = this.originalNodeName;
+        }
+      }
+    } catch (error) {
+      console.error('Error updating node name:', error);
+      this.showToast('Error updating node name', true);
+      
+      // Revert to original name in UI
+      const nameElement = document.getElementById(this.nameId);
+      if (nameElement) {
+        nameElement.textContent = this.originalNodeName;
+      }
+    }
   }
 
   /**
@@ -19180,6 +19252,44 @@ class ModalComponent {
     return this.activeHikerId === hikerId && 
            document.getElementById(this.modalId).classList.contains('active');
   }
+
+  /**
+   * Set up editable name handling
+   */
+  setupEditableName() {
+    const nameElement = document.getElementById(this.nameId);
+    if (!nameElement) return;
+    
+    // Store original value when starting edit
+    nameElement.addEventListener('focus', () => {
+      this.originalNodeName = nameElement.textContent.trim();
+      console.log('Started editing node name, original:', this.originalNodeName);
+    });
+    
+    // Handle edit completion
+    nameElement.addEventListener('blur', () => {
+      const newName = nameElement.textContent.trim();
+      
+      // Prevent empty names
+      if (!newName) {
+        nameElement.textContent = this.originalNodeName;
+        return;
+      }
+      
+      // Only update if name changed
+      if (newName !== this.originalNodeName) {
+        this.updateNodeName(newName);
+      }
+    });
+    
+    // Handle enter key to confirm edit
+    nameElement.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        nameElement.blur(); // Trigger blur event to save
+      }
+    });
+  }
 }
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (ModalComponent); 
@@ -19219,6 +19329,7 @@ class SettingsComponent {
         defaultZoom: 12
       },
       simulation: {
+        enabled: false,
         speed: 3000,
         hikersCount: 10,
         autoSos: true
@@ -19247,127 +19358,171 @@ class SettingsComponent {
    * @param {Function} callbacks.onZoomChange - Called when default zoom changes
    * @param {Function} callbacks.onSimulationSpeedChange - Called when simulation speed changes
    * @param {Function} callbacks.onHikersCountChange - Called when hikers count changes
+   * @param {Function} callbacks.onSimulationToggle - Called when simulation is toggled on/off
    */
   init(callbacks = {}) {
-    this.callbacks = callbacks;
-    
-    // Set up event listeners
-    this.setupEventListeners();
-    
-    // Initialize UI with current settings
-    this.updateUI();
-    
-    return this;
+    try {
+      this.callbacks = callbacks || {};
+      
+      // Set up event listeners
+      this.setupEventListeners();
+      
+      // Initialize UI with current settings
+      setTimeout(() => {
+        try {
+          this.updateUI();
+        } catch (error) {
+          console.warn('Error updating UI after initialization:', error);
+        }
+      }, 0);
+      
+      return this;
+    } catch (error) {
+      console.error('Error initializing settings component:', error);
+      return this;
+    }
   }
 
   /**
    * Setup event listeners for settings controls
    */
   setupEventListeners() {
-    // Settings button click (open modal)
-    document.getElementById(this.settingsBtnId)?.addEventListener('click', () => {
-      this.openSettingsModal();
-    });
-    
-    // Close button click
-    document.getElementById(this.closeBtnId)?.addEventListener('click', () => {
-      this.closeSettingsModal();
-    });
-    
-    // Save button click
-    document.getElementById(this.saveBtnId)?.addEventListener('click', () => {
-      this.saveSettings();
-      this.closeSettingsModal();
-    });
-    
-    // Reset button click
-    document.getElementById(this.resetBtnId)?.addEventListener('click', () => {
-      this.resetSettings();
-    });
-    
-    // Map style change
-    document.getElementById('map-style')?.addEventListener('change', (e) => {
-      const newStyle = e.target.value;
-      this.settings.map.style = newStyle;
-      if (this.callbacks.onMapStyleChange) {
-        this.callbacks.onMapStyleChange(newStyle);
-      }
-    });
-    
-    // Default zoom change
-    document.getElementById('default-zoom')?.addEventListener('input', (e) => {
-      const zoomValue = parseInt(e.target.value);
-      document.getElementById('zoom-value').textContent = zoomValue;
-      this.settings.map.defaultZoom = zoomValue;
-      if (this.callbacks.onZoomChange) {
-        this.callbacks.onZoomChange(zoomValue);
-      }
-    });
-    
-    // Simulation speed change
-    document.getElementById('simulation-speed')?.addEventListener('input', (e) => {
-      const speedValue = parseInt(e.target.value);
-      document.getElementById('speed-value').textContent = `${speedValue}ms`;
-      this.settings.simulation.speed = speedValue;
-      if (this.callbacks.onSimulationSpeedChange) {
-        this.callbacks.onSimulationSpeedChange(speedValue);
-      }
-    });
-    
-    // Hikers count change
-    document.getElementById('hikers-count')?.addEventListener('input', (e) => {
-      const countValue = parseInt(e.target.value);
-      document.getElementById('hikers-count-value').textContent = countValue;
-      this.settings.simulation.hikersCount = countValue;
-      if (this.callbacks.onHikersCountChange) {
-        this.callbacks.onHikersCountChange(countValue);
-      }
-    });
-    
-    // Auto SOS toggle
-    document.getElementById('auto-sos')?.addEventListener('change', (e) => {
-      this.settings.simulation.autoSos = e.target.checked;
-      if (this.callbacks.onAutoSosChange) {
-        this.callbacks.onAutoSosChange(e.target.checked);
-      }
-    });
-    
-    // SOS alerts toggle
-    document.getElementById('sos-alerts')?.addEventListener('change', (e) => {
-      this.settings.notifications.sosAlerts = e.target.checked;
-      if (this.callbacks.onSosAlertsChange) {
-        this.callbacks.onSosAlertsChange(e.target.checked);
-      }
-    });
-    
-    // Battery alerts toggle
-    document.getElementById('battery-alerts')?.addEventListener('change', (e) => {
-      this.settings.notifications.batteryAlerts = e.target.checked;
-      if (this.callbacks.onBatteryAlertsChange) {
-        this.callbacks.onBatteryAlertsChange(e.target.checked);
-      }
-    });
-    
-    // Battery threshold change
-    document.getElementById('battery-threshold')?.addEventListener('input', (e) => {
-      const thresholdValue = parseInt(e.target.value);
-      document.getElementById('battery-threshold-value').textContent = `${thresholdValue}%`;
-      this.settings.notifications.batteryThreshold = thresholdValue;
-      if (this.callbacks.onBatteryThresholdChange) {
-        this.callbacks.onBatteryThresholdChange(thresholdValue);
-      }
-    });
-    
-    // Firebase data source toggle
-    document.getElementById('use-firebase')?.addEventListener('change', (e) => {
-      if (!this.settings.dataSource) {
-        this.settings.dataSource = {};
-      }
-      this.settings.dataSource.useFirebase = e.target.checked;
-      if (this.callbacks.onDataSourceChange) {
-        this.callbacks.onDataSourceChange(e.target.checked);
-      }
-    });
+    try {
+      // Settings button click (open modal)
+      document.getElementById(this.settingsBtnId)?.addEventListener('click', () => {
+        this.openSettingsModal();
+      });
+      
+      // Close button click
+      document.getElementById(this.closeBtnId)?.addEventListener('click', () => {
+        this.closeSettingsModal();
+      });
+      
+      // Save button click
+      document.getElementById(this.saveBtnId)?.addEventListener('click', () => {
+        this.saveSettings();
+        this.closeSettingsModal();
+      });
+      
+      // Reset button click
+      document.getElementById(this.resetBtnId)?.addEventListener('click', () => {
+        this.resetSettings();
+      });
+      
+      // Map style change
+      document.getElementById('map-style')?.addEventListener('change', (e) => {
+        const newStyle = e.target.value;
+        this.settings.map.style = newStyle;
+        if (this.callbacks?.onMapStyleChange) {
+          this.callbacks.onMapStyleChange(newStyle);
+        }
+      });
+      
+      // Default zoom change
+      document.getElementById('default-zoom')?.addEventListener('input', (e) => {
+        const zoomValue = parseInt(e.target.value);
+        const zoomElement = document.getElementById('zoom-value');
+        if (zoomElement) {
+          zoomElement.textContent = zoomValue;
+        }
+        this.settings.map.defaultZoom = zoomValue;
+        if (this.callbacks?.onZoomChange) {
+          this.callbacks.onZoomChange(zoomValue);
+        }
+      });
+      
+      // Simulation toggle
+      document.getElementById('enable-simulation')?.addEventListener('change', (e) => {
+        const isEnabled = e.target.checked;
+        this.settings.simulation.enabled = isEnabled;
+        
+        // Show/hide simulation settings based on toggle state
+        const simulationSettings = document.getElementById('simulation-settings');
+        if (simulationSettings) {
+          simulationSettings.style.display = isEnabled ? 'block' : 'none';
+        }
+        
+        if (this.callbacks?.onSimulationToggle) {
+          this.callbacks.onSimulationToggle(isEnabled);
+        }
+      });
+      
+      // Simulation speed change
+      document.getElementById('simulation-speed')?.addEventListener('input', (e) => {
+        const speedValue = parseInt(e.target.value);
+        const speedElement = document.getElementById('speed-value');
+        if (speedElement) {
+          speedElement.textContent = `${speedValue}ms`;
+        }
+        this.settings.simulation.speed = speedValue;
+        if (this.callbacks?.onSimulationSpeedChange) {
+          this.callbacks.onSimulationSpeedChange(speedValue);
+        }
+      });
+      
+      // Hikers count change
+      document.getElementById('hikers-count')?.addEventListener('input', (e) => {
+        const countValue = parseInt(e.target.value);
+        const countElement = document.getElementById('hikers-count-value');
+        if (countElement) {
+          countElement.textContent = countValue;
+        }
+        this.settings.simulation.hikersCount = countValue;
+        if (this.callbacks?.onHikersCountChange) {
+          this.callbacks.onHikersCountChange(countValue);
+        }
+      });
+      
+      // Auto SOS toggle
+      document.getElementById('auto-sos')?.addEventListener('change', (e) => {
+        this.settings.simulation.autoSos = e.target.checked;
+        if (this.callbacks?.onAutoSosChange) {
+          this.callbacks.onAutoSosChange(e.target.checked);
+        }
+      });
+      
+      // SOS alerts toggle
+      document.getElementById('sos-alerts')?.addEventListener('change', (e) => {
+        this.settings.notifications.sosAlerts = e.target.checked;
+        if (this.callbacks?.onSosAlertsChange) {
+          this.callbacks.onSosAlertsChange(e.target.checked);
+        }
+      });
+      
+      // Battery alerts toggle
+      document.getElementById('battery-alerts')?.addEventListener('change', (e) => {
+        this.settings.notifications.batteryAlerts = e.target.checked;
+        if (this.callbacks?.onBatteryAlertsChange) {
+          this.callbacks.onBatteryAlertsChange(e.target.checked);
+        }
+      });
+      
+      // Battery threshold change
+      document.getElementById('battery-threshold')?.addEventListener('input', (e) => {
+        const thresholdValue = parseInt(e.target.value);
+        const thresholdElement = document.getElementById('battery-threshold-value');
+        if (thresholdElement) {
+          thresholdElement.textContent = `${thresholdValue}%`;
+        }
+        this.settings.notifications.batteryThreshold = thresholdValue;
+        if (this.callbacks?.onBatteryThresholdChange) {
+          this.callbacks.onBatteryThresholdChange(thresholdValue);
+        }
+      });
+      
+      // Firebase data source toggle
+      document.getElementById('use-firebase')?.addEventListener('change', (e) => {
+        if (!this.settings.dataSource) {
+          this.settings.dataSource = {};
+        }
+        this.settings.dataSource.useFirebase = e.target.checked;
+        if (this.callbacks?.onDataSourceChange) {
+          this.callbacks.onDataSourceChange(e.target.checked);
+        }
+      });
+    } catch (error) {
+      console.warn('Error setting up event listeners:', error);
+    }
   }
 
   /**
@@ -19395,44 +19550,85 @@ class SettingsComponent {
    * Update the UI with current settings values
    */
   updateUI() {
-    // Map settings
-    document.getElementById('map-style').value = this.settings.map.style;
-    
-    const zoomSlider = document.getElementById('default-zoom');
-    if (zoomSlider) {
-      zoomSlider.value = this.settings.map.defaultZoom;
-      document.getElementById('zoom-value').textContent = this.settings.map.defaultZoom;
-    }
-    
-    // Simulation settings
-    const speedSlider = document.getElementById('simulation-speed');
-    if (speedSlider) {
-      speedSlider.value = this.settings.simulation.speed;
-      document.getElementById('speed-value').textContent = `${this.settings.simulation.speed}ms`;
-    }
-    
-    const hikersSlider = document.getElementById('hikers-count');
-    if (hikersSlider) {
-      hikersSlider.value = this.settings.simulation.hikersCount;
-      document.getElementById('hikers-count-value').textContent = this.settings.simulation.hikersCount;
-    }
-    
-    document.getElementById('auto-sos').checked = this.settings.simulation.autoSos;
-    
-    // Notification settings
-    document.getElementById('sos-alerts').checked = this.settings.notifications.sosAlerts;
-    document.getElementById('battery-alerts').checked = this.settings.notifications.batteryAlerts;
-    
-    const thresholdSlider = document.getElementById('battery-threshold');
-    if (thresholdSlider) {
-      thresholdSlider.value = this.settings.notifications.batteryThreshold;
-      document.getElementById('battery-threshold-value').textContent = `${this.settings.notifications.batteryThreshold}%`;
-    }
-    
-    // Data source settings
-    const useFirebaseToggle = document.getElementById('use-firebase');
-    if (useFirebaseToggle) {
-      useFirebaseToggle.checked = this.settings.dataSource?.useFirebase ?? true;
+    try {
+      // Map settings
+      const mapStyleElement = document.getElementById('map-style');
+      if (mapStyleElement) {
+        mapStyleElement.value = this.settings.map.style;
+      }
+      
+      const zoomSlider = document.getElementById('default-zoom');
+      if (zoomSlider) {
+        zoomSlider.value = this.settings.map.defaultZoom;
+        const zoomValue = document.getElementById('zoom-value');
+        if (zoomValue) {
+          zoomValue.textContent = this.settings.map.defaultZoom;
+        }
+      }
+      
+      // Simulation toggle
+      const simulationToggle = document.getElementById('enable-simulation');
+      if (simulationToggle) {
+        simulationToggle.checked = this.settings.simulation.enabled;
+        
+        // Show/hide simulation settings based on toggle state
+        const simulationSettings = document.getElementById('simulation-settings');
+        if (simulationSettings) {
+          simulationSettings.style.display = this.settings.simulation.enabled ? 'block' : 'none';
+        }
+      }
+      
+      // Simulation settings
+      const speedSlider = document.getElementById('simulation-speed');
+      if (speedSlider) {
+        speedSlider.value = this.settings.simulation.speed;
+        const speedValue = document.getElementById('speed-value');
+        if (speedValue) {
+          speedValue.textContent = `${this.settings.simulation.speed}ms`;
+        }
+      }
+      
+      const hikersCountSlider = document.getElementById('hikers-count');
+      if (hikersCountSlider) {
+        hikersCountSlider.value = this.settings.simulation.hikersCount;
+        const hikersCountValue = document.getElementById('hikers-count-value');
+        if (hikersCountValue) {
+          hikersCountValue.textContent = this.settings.simulation.hikersCount;
+        }
+      }
+      
+      const autoSosToggle = document.getElementById('auto-sos');
+      if (autoSosToggle) {
+        autoSosToggle.checked = this.settings.simulation.autoSos;
+      }
+      
+      // Notification settings
+      const sosAlertsToggle = document.getElementById('sos-alerts');
+      if (sosAlertsToggle) {
+        sosAlertsToggle.checked = this.settings.notifications.sosAlerts;
+      }
+      
+      const batteryAlertsToggle = document.getElementById('battery-alerts');
+      if (batteryAlertsToggle) {
+        batteryAlertsToggle.checked = this.settings.notifications.batteryAlerts;
+      }
+      
+      const batteryThresholdSlider = document.getElementById('battery-threshold');
+      if (batteryThresholdSlider) {
+        batteryThresholdSlider.value = this.settings.notifications.batteryThreshold;
+        const batteryThresholdValue = document.getElementById('battery-threshold-value');
+        if (batteryThresholdValue) {
+          batteryThresholdValue.textContent = `${this.settings.notifications.batteryThreshold}%`;
+        }
+      }
+      
+      // Data source settings
+      const useFirebaseToggle = document.getElementById('use-firebase');
+      if (useFirebaseToggle) {
+        useFirebaseToggle.checked = this.settings.dataSource?.useFirebase ?? true;
+      }
+    } catch (error) {
+      console.warn('Error updating UI with settings:', error);
     }
   }
 
@@ -19538,6 +19734,17 @@ class SettingsComponent {
    */
   getSettings() {
     return this.settings;
+  }
+
+  /**
+   * Open the settings modal (public method)
+   */
+  openModal() {
+    try {
+      this.openSettingsModal();
+    } catch (error) {
+      console.warn('Error opening settings modal from public method:', error);
+    }
   }
 }
 
@@ -19872,7 +20079,10 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   fetchHikersFromFirebase: () => (/* binding */ fetchHikersFromFirebase),
 /* harmony export */   listenForHikersUpdates: () => (/* binding */ listenForHikersUpdates),
-/* harmony export */   updateHikerSosStatus: () => (/* binding */ updateHikerSosStatus)
+/* harmony export */   updateHikerActiveStatus: () => (/* binding */ updateHikerActiveStatus),
+/* harmony export */   updateHikerData: () => (/* binding */ updateHikerData),
+/* harmony export */   updateHikerSosStatus: () => (/* binding */ updateHikerSosStatus),
+/* harmony export */   updateNodeName: () => (/* binding */ updateNodeName)
 /* harmony export */ });
 /* harmony import */ var firebase_app__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! firebase/app */ "./node_modules/firebase/app/dist/esm/index.esm.js");
 /* harmony import */ var firebase_database__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! firebase/database */ "./node_modules/firebase/database/dist/esm/index.esm.js");
@@ -19938,7 +20148,7 @@ function parseTimestamp(timestamp) {
 }
 
 /**
- * Fetch hikers data from Firebase
+ * Fetch hikers data from Firebase, getting the latest entry from logs for each hiker
  * @returns {Promise<Array>} Promise resolving to an array of hiker objects
  */
 async function fetchHikersFromFirebase() {
@@ -19962,34 +20172,58 @@ async function fetchHikersFromFirebase() {
     
     // Transform data into Hiker objects
     const hikers = [];
-    Object.keys(runnersData).forEach((nodeKey) => {
+    for (const nodeKey of Object.keys(runnersData)) {
       const nodeData = runnersData[nodeKey];
       console.log(`Processing runner ${nodeKey}:`, nodeData);
       
+      // Get the name and active status from the node level
+      const name = nodeData.name || `Hiker ${nodeKey}`;
+      const isActive = nodeData.active !== false; // Default to active if not specified
+      
+      // Get tracking data from logs for this hiker
+      let trackingData = {
+        latitude: 0,
+        longitude: 0,
+        battery: 100,
+        sos_status: false,
+        timestamp: Date.now()
+      };
+      
+      if (nodeData.logs) {
+        // Convert logs object to array and sort by timestamp
+        const logs = Object.values(nodeData.logs)
+          .sort((a, b) => parseTimestamp(b.timestamp) - parseTimestamp(a.timestamp));
+        
+        // Use the most recent log entry
+        if (logs.length > 0) {
+          trackingData = logs[0];
+        }
+      }
+      
       // Parse latitude and longitude as numbers
-      const latitude = parseFloat(nodeData.latitude) || 0;
-      const longitude = parseFloat(nodeData.longitude) || 0;
+      const latitude = parseFloat(trackingData.latitude) || 0;
+      const longitude = parseFloat(trackingData.longitude) || 0;
       
       // Parse timestamp properly
-      const timestamp = parseTimestamp(nodeData.timestamp);
-      console.log(`${nodeKey} timestamp:`, nodeData.timestamp, '→', timestamp, '(', new Date(timestamp).toLocaleString(), ')');
+      const timestamp = parseTimestamp(trackingData.timestamp);
       
-      console.log(`${nodeKey} coordinates:`, latitude, longitude);
+      // Determine status - SOS from tracking data, active from node level
+      const status = trackingData.sos_status ? 'SOS' : (isActive ? 'Active' : 'Inactive');
       
-      // Create a hiker object for each node
+      // Create a hiker object using the latest data
       const hiker = new Hiker(
-        nodeKey, // Use node key as ID
-        `Hiker ${nodeKey}`, // Use node name as a default name
+        nodeKey,
+        name,
         latitude,
         longitude,
-        nodeData.sos_status ? 'SOS' : 'Active',
-        parseFloat(nodeData.battery) || 100,
+        status,
+        parseFloat(trackingData.battery) || 100,
         timestamp,
-        nodeData.sos_status === 'true' || nodeData.sos_status === true
+        trackingData.sos_status === 'true' || trackingData.sos_status === true
       );
       
       hikers.push(hiker);
-    });
+    }
     
     console.log('Processed hikers:', hikers);
     return hikers;
@@ -20026,38 +20260,63 @@ function listenForHikersUpdates(callback) {
       
       // Transform data into Hiker objects
       const hikers = [];
-      Object.keys(runnersData).forEach((nodeKey) => {
+      for (const nodeKey of Object.keys(runnersData)) {
         const nodeData = runnersData[nodeKey];
         console.log(`Real-time update for ${nodeKey}:`, nodeData);
         
+        // Get the name and active status from the node level
+        const name = nodeData.name || `Hiker ${nodeKey}`;
+        const isActive = nodeData.active !== false; // Default to active if not specified
+        
+        // Get tracking data from logs for this hiker
+        let trackingData = {
+          latitude: 0,
+          longitude: 0,
+          battery: 100,
+          sos_status: false,
+          timestamp: Date.now()
+        };
+        
+        if (nodeData.logs) {
+          // Convert logs object to array and sort by timestamp
+          const logs = Object.values(nodeData.logs)
+            .sort((a, b) => parseTimestamp(b.timestamp) - parseTimestamp(a.timestamp));
+          
+          // Use the most recent log entry
+          if (logs.length > 0) {
+            trackingData = logs[0];
+          }
+        }
+        
         // Parse latitude and longitude as numbers
-        const latitude = parseFloat(nodeData.latitude) || 0;
-        const longitude = parseFloat(nodeData.longitude) || 0;
+        const latitude = parseFloat(trackingData.latitude) || 0;
+        const longitude = parseFloat(trackingData.longitude) || 0;
         
         // Parse timestamp properly
-        const timestamp = parseTimestamp(nodeData.timestamp);
-        console.log(`${nodeKey} timestamp:`, nodeData.timestamp, '→', timestamp, '(', new Date(timestamp).toLocaleString(), ')');
+        const timestamp = parseTimestamp(trackingData.timestamp);
         
-        // Create a hiker object for each node
+        // Determine status - SOS from tracking data, active from node level
+        const status = trackingData.sos_status ? 'SOS' : (isActive ? 'Active' : 'Inactive');
+        
+        // Create a hiker object using the latest data
         const hiker = new Hiker(
-          nodeKey, // Use node key as ID
-          `Hiker ${nodeKey}`, // Use node name as a default name
+          nodeKey,
+          name,
           latitude,
           longitude,
-          nodeData.sos_status ? 'SOS' : 'Active',
-          parseFloat(nodeData.battery) || 100,
+          status,
+          parseFloat(trackingData.battery) || 100,
           timestamp,
-          nodeData.sos_status === 'true' || nodeData.sos_status === true
+          trackingData.sos_status === 'true' || trackingData.sos_status === true
         );
         
         hikers.push(hiker);
-      });
+      }
       
       console.log('Processed hikers from real-time update:', hikers);
       callback(hikers);
     });
     
-    // Return a function to unsubscribe
     return unsubscribe;
   } catch (error) {
     console.error('Error setting up hikers listener:', error);
@@ -20066,7 +20325,67 @@ function listenForHikersUpdates(callback) {
 }
 
 /**
- * Update hiker SOS status in Firebase
+ * Update hiker's active status at the node level
+ * @param {string} hikerId - The ID of the hiker to update
+ * @param {boolean} isActive - Whether the hiker is active
+ * @returns {Promise<boolean>} Promise resolving to success status
+ */
+async function updateHikerActiveStatus(hikerId, isActive) {
+  try {
+    if (!hikerId) {
+      console.error('No hiker ID provided for active status update');
+      return false;
+    }
+    
+    console.log(`Updating active status for hiker ${hikerId} to ${isActive}`);
+    
+    // Update active status at the node level
+    const nodeRef = (0,firebase_database__WEBPACK_IMPORTED_MODULE_1__.ref)(database, `runners/${hikerId}`);
+    await (0,firebase_database__WEBPACK_IMPORTED_MODULE_1__.update)(nodeRef, { active: isActive });
+    
+    console.log(`Active status updated for hiker ${hikerId}`);
+    return true;
+  } catch (error) {
+    console.error('Error updating hiker active status:', error);
+    return false;
+  }
+}
+
+/**
+ * Update hiker tracking data and store in logs
+ * @param {string} hikerId - The ID of the hiker to update
+ * @param {Object} trackingData - The tracking data to update (latitude, longitude, battery, etc.)
+ * @returns {Promise<void>}
+ */
+async function updateHikerData(hikerId, trackingData) {
+  try {
+    if (!hikerId) {
+      console.error('No hiker ID provided for update');
+      return;
+    }
+    
+    // Get current server timestamp
+    const currentTime = Date.now();
+    
+    // Add timestamp to tracking data
+    const dataWithTimestamp = {
+      ...trackingData,
+      timestamp: currentTime
+    };
+    
+    // Only create a log entry for tracking data
+    const logRef = (0,firebase_database__WEBPACK_IMPORTED_MODULE_1__.ref)(database, `runners/${hikerId}/logs/${currentTime}`);
+    await (0,firebase_database__WEBPACK_IMPORTED_MODULE_1__.update)(logRef, dataWithTimestamp);
+    
+    console.log(`Updated tracking data for hiker ${hikerId}:`, dataWithTimestamp);
+  } catch (error) {
+    console.error('Error updating hiker tracking data:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update hiker SOS status and store in logs
  * @param {string} hikerId - The ID of the hiker to update
  * @param {boolean} sosStatus - The new SOS status
  * @param {boolean} sosHandled - Whether SOS is handled (optional)
@@ -20081,21 +20400,6 @@ async function updateHikerSosStatus(hikerId, sosStatus, sosHandled = false, sosE
       return;
     }
     
-    console.log(`Starting Firebase update for hiker ${hikerId}`, {
-      sosStatus,
-      sosHandled,
-      sosEmergency,
-      resetSos
-    });
-    
-    // Create reference to the specific hiker node
-    const hikerRef = (0,firebase_database__WEBPACK_IMPORTED_MODULE_1__.ref)(database, `runners/${hikerId}`);
-    
-    // Get current data to verify values
-    const snapshot = await (0,firebase_database__WEBPACK_IMPORTED_MODULE_1__.get)(hikerRef);
-    const currentData = snapshot.val();
-    console.log(`Current data for hiker ${hikerId}:`, currentData);
-    
     // Get current server timestamp
     const currentTime = Date.now();
     
@@ -20103,7 +20407,6 @@ async function updateHikerSosStatus(hikerId, sosStatus, sosHandled = false, sosE
     let updates = {};
     
     if (resetSos) {
-      // Reset all SOS fields - use null to properly remove values in Firebase
       updates = {
         sos_status: false,
         sos_handled: null,
@@ -20111,15 +20414,14 @@ async function updateHikerSosStatus(hikerId, sosStatus, sosHandled = false, sosE
         sos_emergency: null,
         sos_emergency_time: null,
         status: 'Active',
-        timestamp: currentTime // Update the timestamp to the current time
+        timestamp: currentTime
       };
-      console.log(`Resetting SOS status for hiker ${hikerId} with values:`, updates);
     } else {
-      // Regular update
-      updates.sos_status = sosStatus;
-      updates.timestamp = currentTime; // Update the timestamp to the current time
+      updates = {
+        sos_status: sosStatus,
+        timestamp: currentTime
+      };
       
-      // Add handled/emergency status if applicable
       if (sosHandled) {
         updates.sos_handled = true;
         updates.sos_handled_time = currentTime;
@@ -20131,18 +20433,46 @@ async function updateHikerSosStatus(hikerId, sosStatus, sosHandled = false, sosE
       }
     }
     
-    // Update the database
-    console.log(`Sending update to Firebase for hiker ${hikerId}:`, updates);
-    await (0,firebase_database__WEBPACK_IMPORTED_MODULE_1__.update)(hikerRef, updates);
+    // Create a log entry for SOS status
+    const logRef = (0,firebase_database__WEBPACK_IMPORTED_MODULE_1__.ref)(database, `runners/${hikerId}/logs/${currentTime}`);
+    await (0,firebase_database__WEBPACK_IMPORTED_MODULE_1__.update)(logRef, updates);
     
-    // Verify the update worked by reading data again
-    const updatedSnapshot = await (0,firebase_database__WEBPACK_IMPORTED_MODULE_1__.get)(hikerRef);
-    const updatedData = updatedSnapshot.val();
-    console.log(`Updated data for hiker ${hikerId}:`, updatedData);
-    
+    console.log(`Updated SOS status for hiker ${hikerId}:`, updates);
   } catch (error) {
-    console.error('Error updating hiker SOS status in Firebase:', error);
+    console.error('Error updating SOS status:', error);
     throw error;
+  }
+}
+
+/**
+ * Update node name in Firebase - storing it at the node level, not in logs
+ * @param {string} nodeId - The ID of the node to update
+ * @param {string} name - The new name for the node
+ * @returns {Promise<boolean>} Promise resolving to success status
+ */
+async function updateNodeName(nodeId, name) {
+  try {
+    if (!nodeId) {
+      console.error('No node ID provided for name update');
+      return false;
+    }
+    
+    if (!name || typeof name !== 'string') {
+      console.error('Invalid name provided for update:', name);
+      return false;
+    }
+    
+    console.log(`Starting Firebase name update for node ${nodeId}:`, name);
+    
+    // Update just the name at the node level
+    const nodeRef = (0,firebase_database__WEBPACK_IMPORTED_MODULE_1__.ref)(database, `runners/${nodeId}`);
+    await (0,firebase_database__WEBPACK_IMPORTED_MODULE_1__.update)(nodeRef, { name: name });
+    
+    console.log(`Name update successful for node ${nodeId}`);
+    return true;
+  } catch (error) {
+    console.error(`Error updating node ${nodeId} name:`, error);
+    return false;
   }
 } 
 
@@ -20197,12 +20527,12 @@ function getBatteryColor(battery) {
 
 /**
  * Get the appropriate Font Awesome icon for a hiker status
- * @param {string} status - Hiker status (Moving, Resting, SOS)
+ * @param {string} status - Hiker status (Active, Resting, SOS)
  * @returns {string} Font Awesome class name
  */
 function getStatusIcon(status) {
   switch(status) {
-    case 'Moving': return 'fa-person-walking';
+    case 'Active': return 'fa-person-walking';
     case 'Resting': return 'fa-person';
     case 'SOS': return 'fa-exclamation-triangle';
     default: return 'fa-person';
@@ -20245,7 +20575,7 @@ function createSampleHikers(count = 10, centerCoords = [3.139, 101.6869]) {
       const lat = centerCoords[0] + (Math.random() - 0.5) * 0.05;
       const lon = centerCoords[1] + (Math.random() - 0.5) * 0.05;
       const battery = 50 + Math.random() * 50; // 50-100%
-      return new Hiker(index, name, lat, lon, 'Moving', battery);
+      return new Hiker(index, name, lat, lon, 'Active', battery);
     });
   });
 } 
@@ -20558,18 +20888,36 @@ class HikerTrackingApp {
   async init() {
     // Initialize settings component first to load saved preferences
     this.settings.init({
-      // Add callback for data source change
-      onDataSourceChange: (useFirebase) => {
-        this.handleDataSourceChange(useFirebase);
+      // Add callback for simulation toggle
+      onSimulationToggle: (isEnabled) => {
+        this.handleSimulationToggle(isEnabled);
       },
-      // Other settings callbacks can be added here
+      // Callback for simulation speed change
+      onSimulationSpeedChange: (speed) => {
+        this.setSimulationSpeed(speed);
+      },
+      // Callback for hikers count change
+      onHikersCountChange: (count) => {
+        if (!this.isUsingLiveData) {
+          this.restartSimulation(count);
+        }
+      },
+      // Map style change
+      onMapStyleChange: (style) => {
+        this.changeMapStyle(style);
+      },
+      // Zoom change
+      onZoomChange: (zoom) => {
+        this.defaultZoom = zoom;
+        this.map.centerMap(this.defaultCenter, zoom);
+      }
     });
     
     // Setup settings button click event
     const settingsBtn = document.getElementById(this.settingsBtnId);
     if (settingsBtn) {
       settingsBtn.addEventListener('click', () => {
-        this.settings.openModal();
+        this.settings.openSettingsModal();
       });
     }
     
@@ -20612,64 +20960,87 @@ class HikerTrackingApp {
     );
     
     // Set simulation speed from settings
-    this.simulationSpeed = initialSettings.simulation.updateInterval;
+    this.simulationSpeed = initialSettings.simulation.speed;
     
-    // Check if we should use Firebase or simulated data
-    this.isUsingLiveData = initialSettings.dataSource ? initialSettings.dataSource.useFirebase : true;
+    // Check if simulation is enabled
+    const isSimulationEnabled = initialSettings.simulation.enabled;
+    this.isUsingLiveData = !isSimulationEnabled;
     
-    // Try to load data from Firebase if using live data
-    if (this.isUsingLiveData) {
-      try {
-        // Show loading state
-        this.settings.showNotification('Loading hiker data...', 2000);
-        
-        // Load data from Firebase
-        const firebaseHikers = await (0,_utils_firebase_js__WEBPACK_IMPORTED_MODULE_1__.fetchHikersFromFirebase)();
-        
-        if (firebaseHikers && firebaseHikers.length > 0) {
-          // Use Firebase data
-          this.hikers = firebaseHikers;
-          
-          // Set up real-time updates
-          this.setupFirebaseRealTimeUpdates();
-          
-          this.settings.showNotification('Connected to live data', 3000);
-        } else {
-          // Fall back to sample data if Firebase fetch returns empty
-          this.isUsingLiveData = false;
-          this.hikers = await (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.createSampleHikers)(initialSettings.simulation.hikersCount || 10);
-          
-          // Start simulation (only for sample data)
-          this.startSimulation();
-          
-          this.settings.showNotification('No live data available. Using sample data.', 3000);
-        }
-      } catch (error) {
-        console.error('Error loading hikers from Firebase:', error);
-        
-        // Fall back to sample data
-        this.isUsingLiveData = false;
-        this.hikers = await (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.createSampleHikers)(initialSettings.simulation.hikersCount || 10);
-        
-        // Start simulation (only for sample data)
-        this.startSimulation();
-        
-        this.settings.showNotification('Error connecting to live data. Using sample data.', 3000);
-      }
-    } else {
-      // Use sample data
-      this.hikers = await (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.createSampleHikers)(initialSettings.simulation.hikersCount || 10);
-      
-      // Start simulation
-      this.startSimulation();
-      
-      this.settings.showNotification('Using sample data', 2000);
-    }
+    // Load the appropriate data based on settings
+    await this.loadData(isSimulationEnabled);
     
     // Render initial state
     this.renderAll();
     
     return this;
+  }
+
+  /**
+   * Load data based on current mode (live or simulation)
+   * @param {boolean} useSimulation - Whether to use simulated data
+   */
+  async loadData(useSimulation) {
+    if (useSimulation) {
+      // Use simulated data
+      const settings = this.settings.getSettings();
+      this.hikers = await (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.createSampleHikers)(settings.simulation.hikersCount || 10);
+      
+      // Start simulation
+      this.startSimulation();
+      
+      this.settings.showNotification('Using simulated data', 2000);
+    } else {
+      // Use live data from Firebase
+      try {
+        // Show loading state
+        this.settings.showNotification('Loading hiker data...', 2000);
+        
+        // Set up real-time updates first
+        this.setupFirebaseRealTimeUpdates();
+        
+        // Initial data will come through the real-time listener
+        this.settings.showNotification('Connected to live data', 3000);
+      } catch (error) {
+        console.error('Error loading hikers from Firebase:', error);
+        this.hikers = [];
+        this.settings.showNotification('Error connecting to database', 3000);
+      }
+    }
+  }
+
+  /**
+   * Handle simulation toggle
+   * @param {boolean} isEnabled - Whether simulation is enabled
+   */
+  async handleSimulationToggle(isEnabled) {
+    // Don't do anything if the state is the same
+    if (isEnabled === !this.isUsingLiveData) return;
+
+    // Stop current data source
+    this.stopCurrentDataSource();
+    
+    // Update state
+    this.isUsingLiveData = !isEnabled;
+    
+    // Load data for the new state
+    await this.loadData(isEnabled);
+    
+    // Render the UI
+    this.renderAll();
+  }
+
+  /**
+   * Stop the current data source (simulation or Firebase listener)
+   */
+  stopCurrentDataSource() {
+    // Stop simulation if running
+    this.stopSimulation();
+    
+    // Stop Firebase listener if active
+    if (this.firebaseUnsubscribe) {
+      this.firebaseUnsubscribe();
+      this.firebaseUnsubscribe = null;
+    }
   }
 
   /**
@@ -20689,7 +21060,8 @@ class HikerTrackingApp {
         console.log('Received Firebase update with hikers:', updatedHikers);
         
         if (!updatedHikers || updatedHikers.length === 0) {
-          this.settings.showNotification('Received empty update from Firebase', 3000);
+          console.warn('Received empty update from Firebase');
+          // Don't clear existing hikers on empty update unless it's confirmed empty
           return;
         }
         
@@ -20723,8 +21095,10 @@ class HikerTrackingApp {
     // Apply simulation settings
     this.setSimulationSpeed(settings.simulation.speed);
     
-    // Other settings will be applied when relevant
-    // For example, hikers count on restart, notifications when events occur
+    // Handle simulation toggle if needed
+    if (settings.simulation.enabled !== !this.isUsingLiveData) {
+      this.handleSimulationToggle(settings.simulation.enabled);
+    }
   }
 
   /**
@@ -20836,11 +21210,11 @@ class HikerTrackingApp {
         });
       }
       
+      // Update the modal content to reflect changes
+      this.modal.updateModalContent(hiker);
+      
       // Refresh the sidebar to show updated SOS status
       this.sidebar.updateSidebar(this.hikers);
-      
-      // Update SOS count in sidebar
-      this.renderAll();
       
       // Apply special marker style for handled SOS
       this.updateMarkerStyle(hiker);
@@ -20975,93 +21349,6 @@ class HikerTrackingApp {
     // Render and restart
     this.renderAll();
     this.startSimulation();
-  }
-
-  /**
-   * Handle data source change (Firebase vs Simulation)
-   * @param {boolean} useFirebase - Whether to use Firebase data
-   */
-  async handleDataSourceChange(useFirebase) {
-    // Don't do anything if the data source hasn't changed
-    if (this.isUsingLiveData === useFirebase) return;
-    
-    // Stop any existing data fetching
-    this.stopSimulation();
-    if (this.firebaseUnsubscribe) {
-      this.firebaseUnsubscribe();
-      this.firebaseUnsubscribe = null;
-    }
-    
-    this.isUsingLiveData = useFirebase;
-    
-    // Show loading state
-    this.settings.showNotification(`Switching to ${useFirebase ? 'live' : 'simulated'} data...`, 2000);
-    
-    try {
-      if (useFirebase) {
-        // Switch to Firebase data
-        const firebaseHikers = await (0,_utils_firebase_js__WEBPACK_IMPORTED_MODULE_1__.fetchHikersFromFirebase)();
-        
-        if (firebaseHikers && firebaseHikers.length > 0) {
-          this.hikers = firebaseHikers;
-          
-          // Set up real-time updates
-          this.setupFirebaseRealTimeUpdates();
-          
-          this.settings.showNotification('Connected to live data', 3000);
-        } else {
-          throw new Error('No data available from Firebase');
-        }
-      } else {
-        // Switch to simulated data
-        const currentSettings = this.settings.getSettings();
-        this.hikers = await (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.createSampleHikers)(currentSettings.simulation.hikersCount);
-        
-        // Start the simulation
-        this.startSimulation();
-        
-        this.settings.showNotification('Using simulated data', 3000);
-      }
-      
-      // Render the new data
-      this.renderAll();
-    } catch (error) {
-      console.error('Error switching data source:', error);
-      
-      // If failed switching to Firebase, revert to simulation
-      if (useFirebase) {
-        this.isUsingLiveData = false;
-        
-        // Update the toggle in settings
-        const firebaseToggle = document.getElementById('use-firebase');
-        if (firebaseToggle) {
-          firebaseToggle.checked = false;
-          
-          // Update the settings object
-          const currentSettings = this.settings.getSettings();
-          if (currentSettings.dataSource) {
-            currentSettings.dataSource.useFirebase = false;
-          } else {
-            currentSettings.dataSource = { useFirebase: false };
-          }
-          
-          // Save the updated settings
-          localStorage.setItem('hikerTrackerSettings', JSON.stringify(currentSettings));
-        }
-        
-        // Load simulated data
-        const currentSettings = this.settings.getSettings();
-        this.hikers = await (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.createSampleHikers)(currentSettings.simulation.hikersCount);
-        
-        // Start the simulation
-        this.startSimulation();
-        
-        this.settings.showNotification('Failed to connect to live data. Using simulation instead.', 4000);
-        
-        // Render the simulated data
-        this.renderAll();
-      }
-    }
   }
 }
 

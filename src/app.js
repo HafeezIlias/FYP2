@@ -2,7 +2,7 @@
  * Main Application - Coordinates all components
  */
 import { createSampleHikers } from './utils/helpers.js';
-import { fetchHikersFromFirebase, listenForHikersUpdates, updateHikerSosStatus } from './utils/firebase.js';
+import { fetchHikersFromFirebase, listenForHikersUpdates, updateHikerSosStatus, updateNodeName } from './utils/firebase.js';
 import MapComponent from './components/Map/Map.js';
 import SidebarComponent from './components/Sidebar/Sidebar.js';
 import ModalComponent from './components/Modal/Modal.js';
@@ -36,18 +36,36 @@ class HikerTrackingApp {
   async init() {
     // Initialize settings component first to load saved preferences
     this.settings.init({
-      // Add callback for data source change
-      onDataSourceChange: (useFirebase) => {
-        this.handleDataSourceChange(useFirebase);
+      // Add callback for simulation toggle
+      onSimulationToggle: (isEnabled) => {
+        this.handleSimulationToggle(isEnabled);
       },
-      // Other settings callbacks can be added here
+      // Callback for simulation speed change
+      onSimulationSpeedChange: (speed) => {
+        this.setSimulationSpeed(speed);
+      },
+      // Callback for hikers count change
+      onHikersCountChange: (count) => {
+        if (!this.isUsingLiveData) {
+          this.restartSimulation(count);
+        }
+      },
+      // Map style change
+      onMapStyleChange: (style) => {
+        this.changeMapStyle(style);
+      },
+      // Zoom change
+      onZoomChange: (zoom) => {
+        this.defaultZoom = zoom;
+        this.map.centerMap(this.defaultCenter, zoom);
+      }
     });
     
     // Setup settings button click event
     const settingsBtn = document.getElementById(this.settingsBtnId);
     if (settingsBtn) {
       settingsBtn.addEventListener('click', () => {
-        this.settings.openModal();
+        this.settings.openSettingsModal();
       });
     }
     
@@ -90,64 +108,87 @@ class HikerTrackingApp {
     );
     
     // Set simulation speed from settings
-    this.simulationSpeed = initialSettings.simulation.updateInterval;
+    this.simulationSpeed = initialSettings.simulation.speed;
     
-    // Check if we should use Firebase or simulated data
-    this.isUsingLiveData = initialSettings.dataSource ? initialSettings.dataSource.useFirebase : true;
+    // Check if simulation is enabled
+    const isSimulationEnabled = initialSettings.simulation.enabled;
+    this.isUsingLiveData = !isSimulationEnabled;
     
-    // Try to load data from Firebase if using live data
-    if (this.isUsingLiveData) {
-      try {
-        // Show loading state
-        this.settings.showNotification('Loading hiker data...', 2000);
-        
-        // Load data from Firebase
-        const firebaseHikers = await fetchHikersFromFirebase();
-        
-        if (firebaseHikers && firebaseHikers.length > 0) {
-          // Use Firebase data
-          this.hikers = firebaseHikers;
-          
-          // Set up real-time updates
-          this.setupFirebaseRealTimeUpdates();
-          
-          this.settings.showNotification('Connected to live data', 3000);
-        } else {
-          // Fall back to sample data if Firebase fetch returns empty
-          this.isUsingLiveData = false;
-          this.hikers = await createSampleHikers(initialSettings.simulation.hikersCount || 10);
-          
-          // Start simulation (only for sample data)
-          this.startSimulation();
-          
-          this.settings.showNotification('No live data available. Using sample data.', 3000);
-        }
-      } catch (error) {
-        console.error('Error loading hikers from Firebase:', error);
-        
-        // Fall back to sample data
-        this.isUsingLiveData = false;
-        this.hikers = await createSampleHikers(initialSettings.simulation.hikersCount || 10);
-        
-        // Start simulation (only for sample data)
-        this.startSimulation();
-        
-        this.settings.showNotification('Error connecting to live data. Using sample data.', 3000);
-      }
-    } else {
-      // Use sample data
-      this.hikers = await createSampleHikers(initialSettings.simulation.hikersCount || 10);
-      
-      // Start simulation
-      this.startSimulation();
-      
-      this.settings.showNotification('Using sample data', 2000);
-    }
+    // Load the appropriate data based on settings
+    await this.loadData(isSimulationEnabled);
     
     // Render initial state
     this.renderAll();
     
     return this;
+  }
+
+  /**
+   * Load data based on current mode (live or simulation)
+   * @param {boolean} useSimulation - Whether to use simulated data
+   */
+  async loadData(useSimulation) {
+    if (useSimulation) {
+      // Use simulated data
+      const settings = this.settings.getSettings();
+      this.hikers = await createSampleHikers(settings.simulation.hikersCount || 10);
+      
+      // Start simulation
+      this.startSimulation();
+      
+      this.settings.showNotification('Using simulated data', 2000);
+    } else {
+      // Use live data from Firebase
+      try {
+        // Show loading state
+        this.settings.showNotification('Loading hiker data...', 2000);
+        
+        // Set up real-time updates first
+        this.setupFirebaseRealTimeUpdates();
+        
+        // Initial data will come through the real-time listener
+        this.settings.showNotification('Connected to live data', 3000);
+      } catch (error) {
+        console.error('Error loading hikers from Firebase:', error);
+        this.hikers = [];
+        this.settings.showNotification('Error connecting to database', 3000);
+      }
+    }
+  }
+
+  /**
+   * Handle simulation toggle
+   * @param {boolean} isEnabled - Whether simulation is enabled
+   */
+  async handleSimulationToggle(isEnabled) {
+    // Don't do anything if the state is the same
+    if (isEnabled === !this.isUsingLiveData) return;
+
+    // Stop current data source
+    this.stopCurrentDataSource();
+    
+    // Update state
+    this.isUsingLiveData = !isEnabled;
+    
+    // Load data for the new state
+    await this.loadData(isEnabled);
+    
+    // Render the UI
+    this.renderAll();
+  }
+
+  /**
+   * Stop the current data source (simulation or Firebase listener)
+   */
+  stopCurrentDataSource() {
+    // Stop simulation if running
+    this.stopSimulation();
+    
+    // Stop Firebase listener if active
+    if (this.firebaseUnsubscribe) {
+      this.firebaseUnsubscribe();
+      this.firebaseUnsubscribe = null;
+    }
   }
 
   /**
@@ -167,7 +208,8 @@ class HikerTrackingApp {
         console.log('Received Firebase update with hikers:', updatedHikers);
         
         if (!updatedHikers || updatedHikers.length === 0) {
-          this.settings.showNotification('Received empty update from Firebase', 3000);
+          console.warn('Received empty update from Firebase');
+          // Don't clear existing hikers on empty update unless it's confirmed empty
           return;
         }
         
@@ -201,8 +243,10 @@ class HikerTrackingApp {
     // Apply simulation settings
     this.setSimulationSpeed(settings.simulation.speed);
     
-    // Other settings will be applied when relevant
-    // For example, hikers count on restart, notifications when events occur
+    // Handle simulation toggle if needed
+    if (settings.simulation.enabled !== !this.isUsingLiveData) {
+      this.handleSimulationToggle(settings.simulation.enabled);
+    }
   }
 
   /**
@@ -314,11 +358,11 @@ class HikerTrackingApp {
         });
       }
       
+      // Update the modal content to reflect changes
+      this.modal.updateModalContent(hiker);
+      
       // Refresh the sidebar to show updated SOS status
       this.sidebar.updateSidebar(this.hikers);
-      
-      // Update SOS count in sidebar
-      this.renderAll();
       
       // Apply special marker style for handled SOS
       this.updateMarkerStyle(hiker);
@@ -453,93 +497,6 @@ class HikerTrackingApp {
     // Render and restart
     this.renderAll();
     this.startSimulation();
-  }
-
-  /**
-   * Handle data source change (Firebase vs Simulation)
-   * @param {boolean} useFirebase - Whether to use Firebase data
-   */
-  async handleDataSourceChange(useFirebase) {
-    // Don't do anything if the data source hasn't changed
-    if (this.isUsingLiveData === useFirebase) return;
-    
-    // Stop any existing data fetching
-    this.stopSimulation();
-    if (this.firebaseUnsubscribe) {
-      this.firebaseUnsubscribe();
-      this.firebaseUnsubscribe = null;
-    }
-    
-    this.isUsingLiveData = useFirebase;
-    
-    // Show loading state
-    this.settings.showNotification(`Switching to ${useFirebase ? 'live' : 'simulated'} data...`, 2000);
-    
-    try {
-      if (useFirebase) {
-        // Switch to Firebase data
-        const firebaseHikers = await fetchHikersFromFirebase();
-        
-        if (firebaseHikers && firebaseHikers.length > 0) {
-          this.hikers = firebaseHikers;
-          
-          // Set up real-time updates
-          this.setupFirebaseRealTimeUpdates();
-          
-          this.settings.showNotification('Connected to live data', 3000);
-        } else {
-          throw new Error('No data available from Firebase');
-        }
-      } else {
-        // Switch to simulated data
-        const currentSettings = this.settings.getSettings();
-        this.hikers = await createSampleHikers(currentSettings.simulation.hikersCount);
-        
-        // Start the simulation
-        this.startSimulation();
-        
-        this.settings.showNotification('Using simulated data', 3000);
-      }
-      
-      // Render the new data
-      this.renderAll();
-    } catch (error) {
-      console.error('Error switching data source:', error);
-      
-      // If failed switching to Firebase, revert to simulation
-      if (useFirebase) {
-        this.isUsingLiveData = false;
-        
-        // Update the toggle in settings
-        const firebaseToggle = document.getElementById('use-firebase');
-        if (firebaseToggle) {
-          firebaseToggle.checked = false;
-          
-          // Update the settings object
-          const currentSettings = this.settings.getSettings();
-          if (currentSettings.dataSource) {
-            currentSettings.dataSource.useFirebase = false;
-          } else {
-            currentSettings.dataSource = { useFirebase: false };
-          }
-          
-          // Save the updated settings
-          localStorage.setItem('hikerTrackerSettings', JSON.stringify(currentSettings));
-        }
-        
-        // Load simulated data
-        const currentSettings = this.settings.getSettings();
-        this.hikers = await createSampleHikers(currentSettings.simulation.hikersCount);
-        
-        // Start the simulation
-        this.startSimulation();
-        
-        this.settings.showNotification('Failed to connect to live data. Using simulation instead.', 4000);
-        
-        // Render the simulated data
-        this.renderAll();
-      }
-    }
   }
 }
 
