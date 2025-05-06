@@ -2,6 +2,7 @@
  * Modal Component - Handles the hiker detail modal
  */
 import { flashUpdate, getBatteryColor } from '../../utils/helpers.js';
+import { updateNodeName } from '../../utils/firebase.js';
 
 class ModalComponent {
   /**
@@ -30,6 +31,7 @@ class ModalComponent {
     
     this.activeHikerId = null;
     this.activeHiker = null;
+    this.originalNodeName = ''; // Store original name to detect changes
   }
 
   /**
@@ -86,10 +88,79 @@ class ModalComponent {
       }
     });
     
+    // Set up editable name handling
+    this.setupEditableName();
+    
     // Add "Live" indicator
     this.addUpdateIndicator();
     
     return this;
+  }
+  
+  /**
+   * Show a toast notification
+   * @param {string} message - The message to display
+   * @param {boolean} isError - Whether this is an error notification
+   */
+  showToast(message, isError = false) {
+    // Remove any existing toasts
+    const existingToast = document.querySelector('.toast');
+    if (existingToast) {
+      existingToast.remove();
+    }
+    
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `toast${isError ? ' error' : ''}`;
+    toast.innerHTML = `
+      <i class="fas fa-${isError ? 'exclamation-circle' : 'check-circle'}"></i>
+      <span>${message}</span>
+    `;
+    
+    // Add to DOM
+    document.body.appendChild(toast);
+    
+    // Remove after animation completes
+    setTimeout(() => {
+      toast.remove();
+    }, 3000);
+  }
+  
+  /**
+   * Update node name in Firebase
+   * @param {string} newName - The new name for the node
+   */
+  async updateNodeName(newName) {
+    if (!this.activeHikerId) return;
+    
+    try {
+      console.log(`Updating node ${this.activeHikerId} name to: ${newName}`);
+      const success = await updateNodeName(this.activeHikerId, newName);
+      
+      if (success) {
+        console.log(`Node name updated to: ${newName}`);
+        this.showToast(`Node name updated to: ${newName}`);
+        // UI will update through real-time listener
+      } else {
+        console.error('Failed to update node name');
+        this.showToast('Failed to update the node name', true);
+        
+        // Revert to original name in UI
+        const nameElement = document.getElementById(this.nameId);
+        if (nameElement) {
+          nameElement.textContent = this.originalNodeName;
+        }
+      }
+    } catch (error) {
+      console.error('Error updating node name:', error);
+      this.showToast('Error updating node name', true);
+      
+      // Revert to original name in UI
+      const nameElement = document.getElementById(this.nameId);
+      if (nameElement) {
+        nameElement.textContent = this.originalNodeName;
+      }
+    }
   }
 
   /**
@@ -269,6 +340,44 @@ class ModalComponent {
   isOpenForHiker(hikerId) {
     return this.activeHikerId === hikerId && 
            document.getElementById(this.modalId).classList.contains('active');
+  }
+
+  /**
+   * Set up editable name handling
+   */
+  setupEditableName() {
+    const nameElement = document.getElementById(this.nameId);
+    if (!nameElement) return;
+    
+    // Store original value when starting edit
+    nameElement.addEventListener('focus', () => {
+      this.originalNodeName = nameElement.textContent.trim();
+      console.log('Started editing node name, original:', this.originalNodeName);
+    });
+    
+    // Handle edit completion
+    nameElement.addEventListener('blur', () => {
+      const newName = nameElement.textContent.trim();
+      
+      // Prevent empty names
+      if (!newName) {
+        nameElement.textContent = this.originalNodeName;
+        return;
+      }
+      
+      // Only update if name changed
+      if (newName !== this.originalNodeName) {
+        this.updateNodeName(newName);
+      }
+    });
+    
+    // Handle enter key to confirm edit
+    nameElement.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        nameElement.blur(); // Trigger blur event to save
+      }
+    });
   }
 }
 

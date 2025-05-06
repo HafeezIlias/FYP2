@@ -60,7 +60,7 @@ function parseTimestamp(timestamp) {
 }
 
 /**
- * Fetch hikers data from Firebase
+ * Fetch hikers data from Firebase, getting the latest entry from logs for each hiker
  * @returns {Promise<Array>} Promise resolving to an array of hiker objects
  */
 export async function fetchHikersFromFirebase() {
@@ -84,34 +84,58 @@ export async function fetchHikersFromFirebase() {
     
     // Transform data into Hiker objects
     const hikers = [];
-    Object.keys(runnersData).forEach((nodeKey) => {
+    for (const nodeKey of Object.keys(runnersData)) {
       const nodeData = runnersData[nodeKey];
       console.log(`Processing runner ${nodeKey}:`, nodeData);
       
+      // Get the name and active status from the node level
+      const name = nodeData.name || `Hiker ${nodeKey}`;
+      const isActive = nodeData.active !== false; // Default to active if not specified
+      
+      // Get tracking data from logs for this hiker
+      let trackingData = {
+        latitude: 0,
+        longitude: 0,
+        battery: 100,
+        sos_status: false,
+        timestamp: Date.now()
+      };
+      
+      if (nodeData.logs) {
+        // Convert logs object to array and sort by timestamp
+        const logs = Object.values(nodeData.logs)
+          .sort((a, b) => parseTimestamp(b.timestamp) - parseTimestamp(a.timestamp));
+        
+        // Use the most recent log entry
+        if (logs.length > 0) {
+          trackingData = logs[0];
+        }
+      }
+      
       // Parse latitude and longitude as numbers
-      const latitude = parseFloat(nodeData.latitude) || 0;
-      const longitude = parseFloat(nodeData.longitude) || 0;
+      const latitude = parseFloat(trackingData.latitude) || 0;
+      const longitude = parseFloat(trackingData.longitude) || 0;
       
       // Parse timestamp properly
-      const timestamp = parseTimestamp(nodeData.timestamp);
-      console.log(`${nodeKey} timestamp:`, nodeData.timestamp, '→', timestamp, '(', new Date(timestamp).toLocaleString(), ')');
+      const timestamp = parseTimestamp(trackingData.timestamp);
       
-      console.log(`${nodeKey} coordinates:`, latitude, longitude);
+      // Determine status - SOS from tracking data, active from node level
+      const status = trackingData.sos_status ? 'SOS' : (isActive ? 'Active' : 'Inactive');
       
-      // Create a hiker object for each node
+      // Create a hiker object using the latest data
       const hiker = new Hiker(
-        nodeKey, // Use node key as ID
-        `Hiker ${nodeKey}`, // Use node name as a default name
+        nodeKey,
+        name,
         latitude,
         longitude,
-        nodeData.sos_status ? 'SOS' : 'Active',
-        parseFloat(nodeData.battery) || 100,
+        status,
+        parseFloat(trackingData.battery) || 100,
         timestamp,
-        nodeData.sos_status === 'true' || nodeData.sos_status === true
+        trackingData.sos_status === 'true' || trackingData.sos_status === true
       );
       
       hikers.push(hiker);
-    });
+    }
     
     console.log('Processed hikers:', hikers);
     return hikers;
@@ -148,38 +172,63 @@ export function listenForHikersUpdates(callback) {
       
       // Transform data into Hiker objects
       const hikers = [];
-      Object.keys(runnersData).forEach((nodeKey) => {
+      for (const nodeKey of Object.keys(runnersData)) {
         const nodeData = runnersData[nodeKey];
         console.log(`Real-time update for ${nodeKey}:`, nodeData);
         
+        // Get the name and active status from the node level
+        const name = nodeData.name || `Hiker ${nodeKey}`;
+        const isActive = nodeData.active !== false; // Default to active if not specified
+        
+        // Get tracking data from logs for this hiker
+        let trackingData = {
+          latitude: 0,
+          longitude: 0,
+          battery: 100,
+          sos_status: false,
+          timestamp: Date.now()
+        };
+        
+        if (nodeData.logs) {
+          // Convert logs object to array and sort by timestamp
+          const logs = Object.values(nodeData.logs)
+            .sort((a, b) => parseTimestamp(b.timestamp) - parseTimestamp(a.timestamp));
+          
+          // Use the most recent log entry
+          if (logs.length > 0) {
+            trackingData = logs[0];
+          }
+        }
+        
         // Parse latitude and longitude as numbers
-        const latitude = parseFloat(nodeData.latitude) || 0;
-        const longitude = parseFloat(nodeData.longitude) || 0;
+        const latitude = parseFloat(trackingData.latitude) || 0;
+        const longitude = parseFloat(trackingData.longitude) || 0;
         
         // Parse timestamp properly
-        const timestamp = parseTimestamp(nodeData.timestamp);
-        console.log(`${nodeKey} timestamp:`, nodeData.timestamp, '→', timestamp, '(', new Date(timestamp).toLocaleString(), ')');
+        const timestamp = parseTimestamp(trackingData.timestamp);
         
-        // Create a hiker object for each node
+        // Determine status - SOS from tracking data, active from node level
+        const status = trackingData.sos_status ? 'SOS' : (isActive ? 'Active' : 'Inactive');
+        
+        // Create a hiker object using the latest data
         const hiker = new Hiker(
-          nodeKey, // Use node key as ID
-          `Hiker ${nodeKey}`, // Use node name as a default name
+          nodeKey,
+          name,
           latitude,
           longitude,
-          nodeData.sos_status ? 'SOS' : 'Active',
-          parseFloat(nodeData.battery) || 100,
+          status,
+          parseFloat(trackingData.battery) || 100,
           timestamp,
-          nodeData.sos_status === 'true' || nodeData.sos_status === true
+          trackingData.sos_status === 'true' || trackingData.sos_status === true
         );
         
         hikers.push(hiker);
-      });
+      }
       
       console.log('Processed hikers from real-time update:', hikers);
       callback(hikers);
     });
     
-    // Return a function to unsubscribe
     return unsubscribe;
   } catch (error) {
     console.error('Error setting up hikers listener:', error);
@@ -188,7 +237,67 @@ export function listenForHikersUpdates(callback) {
 }
 
 /**
- * Update hiker SOS status in Firebase
+ * Update hiker's active status at the node level
+ * @param {string} hikerId - The ID of the hiker to update
+ * @param {boolean} isActive - Whether the hiker is active
+ * @returns {Promise<boolean>} Promise resolving to success status
+ */
+export async function updateHikerActiveStatus(hikerId, isActive) {
+  try {
+    if (!hikerId) {
+      console.error('No hiker ID provided for active status update');
+      return false;
+    }
+    
+    console.log(`Updating active status for hiker ${hikerId} to ${isActive}`);
+    
+    // Update active status at the node level
+    const nodeRef = ref(database, `runners/${hikerId}`);
+    await update(nodeRef, { active: isActive });
+    
+    console.log(`Active status updated for hiker ${hikerId}`);
+    return true;
+  } catch (error) {
+    console.error('Error updating hiker active status:', error);
+    return false;
+  }
+}
+
+/**
+ * Update hiker tracking data and store in logs
+ * @param {string} hikerId - The ID of the hiker to update
+ * @param {Object} trackingData - The tracking data to update (latitude, longitude, battery, etc.)
+ * @returns {Promise<void>}
+ */
+export async function updateHikerData(hikerId, trackingData) {
+  try {
+    if (!hikerId) {
+      console.error('No hiker ID provided for update');
+      return;
+    }
+    
+    // Get current server timestamp
+    const currentTime = Date.now();
+    
+    // Add timestamp to tracking data
+    const dataWithTimestamp = {
+      ...trackingData,
+      timestamp: currentTime
+    };
+    
+    // Only create a log entry for tracking data
+    const logRef = ref(database, `runners/${hikerId}/logs/${currentTime}`);
+    await update(logRef, dataWithTimestamp);
+    
+    console.log(`Updated tracking data for hiker ${hikerId}:`, dataWithTimestamp);
+  } catch (error) {
+    console.error('Error updating hiker tracking data:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update hiker SOS status and store in logs
  * @param {string} hikerId - The ID of the hiker to update
  * @param {boolean} sosStatus - The new SOS status
  * @param {boolean} sosHandled - Whether SOS is handled (optional)
@@ -203,21 +312,6 @@ export async function updateHikerSosStatus(hikerId, sosStatus, sosHandled = fals
       return;
     }
     
-    console.log(`Starting Firebase update for hiker ${hikerId}`, {
-      sosStatus,
-      sosHandled,
-      sosEmergency,
-      resetSos
-    });
-    
-    // Create reference to the specific hiker node
-    const hikerRef = ref(database, `runners/${hikerId}`);
-    
-    // Get current data to verify values
-    const snapshot = await get(hikerRef);
-    const currentData = snapshot.val();
-    console.log(`Current data for hiker ${hikerId}:`, currentData);
-    
     // Get current server timestamp
     const currentTime = Date.now();
     
@@ -225,7 +319,6 @@ export async function updateHikerSosStatus(hikerId, sosStatus, sosHandled = fals
     let updates = {};
     
     if (resetSos) {
-      // Reset all SOS fields - use null to properly remove values in Firebase
       updates = {
         sos_status: false,
         sos_handled: null,
@@ -233,15 +326,14 @@ export async function updateHikerSosStatus(hikerId, sosStatus, sosHandled = fals
         sos_emergency: null,
         sos_emergency_time: null,
         status: 'Active',
-        timestamp: currentTime // Update the timestamp to the current time
+        timestamp: currentTime
       };
-      console.log(`Resetting SOS status for hiker ${hikerId} with values:`, updates);
     } else {
-      // Regular update
-      updates.sos_status = sosStatus;
-      updates.timestamp = currentTime; // Update the timestamp to the current time
+      updates = {
+        sos_status: sosStatus,
+        timestamp: currentTime
+      };
       
-      // Add handled/emergency status if applicable
       if (sosHandled) {
         updates.sos_handled = true;
         updates.sos_handled_time = currentTime;
@@ -253,17 +345,45 @@ export async function updateHikerSosStatus(hikerId, sosStatus, sosHandled = fals
       }
     }
     
-    // Update the database
-    console.log(`Sending update to Firebase for hiker ${hikerId}:`, updates);
-    await update(hikerRef, updates);
+    // Create a log entry for SOS status
+    const logRef = ref(database, `runners/${hikerId}/logs/${currentTime}`);
+    await update(logRef, updates);
     
-    // Verify the update worked by reading data again
-    const updatedSnapshot = await get(hikerRef);
-    const updatedData = updatedSnapshot.val();
-    console.log(`Updated data for hiker ${hikerId}:`, updatedData);
-    
+    console.log(`Updated SOS status for hiker ${hikerId}:`, updates);
   } catch (error) {
-    console.error('Error updating hiker SOS status in Firebase:', error);
+    console.error('Error updating SOS status:', error);
     throw error;
+  }
+}
+
+/**
+ * Update node name in Firebase - storing it at the node level, not in logs
+ * @param {string} nodeId - The ID of the node to update
+ * @param {string} name - The new name for the node
+ * @returns {Promise<boolean>} Promise resolving to success status
+ */
+export async function updateNodeName(nodeId, name) {
+  try {
+    if (!nodeId) {
+      console.error('No node ID provided for name update');
+      return false;
+    }
+    
+    if (!name || typeof name !== 'string') {
+      console.error('Invalid name provided for update:', name);
+      return false;
+    }
+    
+    console.log(`Starting Firebase name update for node ${nodeId}:`, name);
+    
+    // Update just the name at the node level
+    const nodeRef = ref(database, `runners/${nodeId}`);
+    await update(nodeRef, { name: name });
+    
+    console.log(`Name update successful for node ${nodeId}`);
+    return true;
+  } catch (error) {
+    console.error(`Error updating node ${nodeId} name:`, error);
+    return false;
   }
 } 

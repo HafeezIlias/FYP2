@@ -1,5 +1,5 @@
 /**
- * Hiker Model - Represents a hiker entity with movement simulation
+ * Hiker Model - Represents a hiker entity
  */
 class Hiker {
   /**
@@ -8,7 +8,7 @@ class Hiker {
    * @param {string} name - Hiker's name
    * @param {number} lat - Latitude coordinate
    * @param {number} lon - Longitude coordinate
-   * @param {string} status - Current status (Active, Moving, Resting, SOS)
+   * @param {string} status - Current status (Active, Resting, SOS)
    * @param {number} battery - Battery percentage (0-100)
    * @param {number} lastUpdate - Timestamp of last update
    * @param {boolean} sos - Whether in SOS mode
@@ -23,73 +23,85 @@ class Hiker {
     this.lastUpdate = lastUpdate;
     this.sos = sos;
     
-    // For simulated movement
-    this.speed = Math.random() * 0.0002 + 0.00005; // random speed
-    this.direction = Math.random() * Math.PI * 2; // random direction
-    this.movementPause = Math.random() > 0.7; // 30% chance to be stationary initially
-    this.pauseDuration = 0;
-    
     // Notification flags
     this.sosNotified = false;
     this.batteryNotified = false;
-    
-    // Settings control
-    this.enableSos = true; // Can be disabled via settings
     
     // SOS handling
     this.sosHandled = false;
     this.sosHandledTime = null;
     this.sosEmergencyDispatched = false;
     this.sosEmergencyTime = null;
+
+    // Simulation properties
+    this.speed = 0.0001 + Math.random() * 0.0002; // Random movement speed
+    this.direction = Math.random() * Math.PI * 2; // Random direction in radians
+    this.directionalBias = { // Tendency to go in certain direction
+      lat: Math.random() * 0.6 - 0.3,
+      lon: Math.random() * 0.6 - 0.3
+    };
+    this.movementProbability = 0.9; // 90% chance to move each update
+    this.restProbability = 0.05; // 5% chance to rest if active
+    this.resumeProbability = 0.3; // 30% chance to resume if resting
+    this.batteryDrainRate = 0.1 + Math.random() * 0.3; // Random battery drain (0.1-0.4% per update)
   }
   
   /**
-   * Update hiker position for simulation
+   * Update hiker data with new position for live data
+   * @param {number} lat - New latitude
+   * @param {number} lon - New longitude
+   * @param {number} battery - New battery level
+   * @param {string} status - New status
+   */
+  updateData(lat, lon, battery, status = 'Active') {
+    this.lat = lat;
+    this.lon = lon;
+    this.battery = battery;
+    this.status = status;
+    this.lastUpdate = Date.now();
+  }
+
+  /**
+   * Update position for simulation
    */
   updatePosition() {
-    // SOS doesn't move
+    // Don't update position if in SOS mode
     if (this.sos) return;
     
-    // Handle pausing
-    if (this.movementPause) {
-      this.pauseDuration++;
-      if (this.pauseDuration > 10) { // Resume after ~10 seconds
-        this.movementPause = false;
-        this.pauseDuration = 0;
-        this.status = 'Moving';
-      } else {
-        this.status = 'Resting';
-        return;
-      }
-    } else if (Math.random() > 0.95) { // 5% chance to pause
-      this.movementPause = true;
+    // Drain battery
+    this.battery = Math.max(0, this.battery - this.batteryDrainRate);
+    
+    // Update status based on probabilities
+    if (this.status === 'Active' && Math.random() < this.restProbability) {
       this.status = 'Resting';
-      return;
+    } else if (this.status === 'Resting' && Math.random() < this.resumeProbability) {
+      this.status = 'Active';
     }
     
-    // Random slight direction change
-    this.direction += (Math.random() - 0.5) * 0.2;
+    // Only move if active and probability check passes
+    if (this.status === 'Active' && Math.random() < this.movementProbability) {
+      // Slightly change direction (wander)
+      this.direction += (Math.random() - 0.5) * 0.5;
+      
+      // Calculate movement with directional bias
+      const latChange = Math.sin(this.direction) * this.speed + this.directionalBias.lat * 0.00002;
+      const lonChange = Math.cos(this.direction) * this.speed + this.directionalBias.lon * 0.00002;
+      
+      // Update coordinates
+      this.lat = parseFloat(this.lat) + latChange;
+      this.lon = parseFloat(this.lon) + lonChange;
+    }
     
-    // Update coordinates based on direction and speed
-    this.lat += Math.sin(this.direction) * this.speed;
-    this.lon += Math.cos(this.direction) * this.speed;
+    // Random chance for SOS (1% when battery below 30%, 0.2% otherwise)
+    if (!this.sos) {
+      const sosProbability = this.battery < 30 ? 0.01 : 0.002;
+      if (Math.random() < sosProbability) {
+        this.setSosStatus(true);
+      }
+    }
     
-    // Update battery (decreases more when moving)
-    this.battery = Math.max(0, this.battery - Math.random() * 0.3);
-    
-    // Update timestamp
+    // Update last update timestamp
     this.lastUpdate = Date.now();
-    
-    // Random SOS event (only if enabled in settings)
-    if (this.enableSos && Math.random() > 0.997) { // Very rare SOS event
-      this.sos = true;
-      this.status = 'SOS';
-      // Reset handling status
-      this.sosHandled = false;
-      this.sosHandledTime = null;
-      this.sosEmergencyDispatched = false;
-      this.sosEmergencyTime = null;
-    }
   }
   
   /**
@@ -154,6 +166,27 @@ class Hiker {
     this.sosEmergencyDispatched = false;
     this.sosEmergencyTime = null;
     this.sosNotified = false;
+    
+    return true;
+  }
+  
+  /**
+   * Set SOS status
+   * @param {boolean} sosState - New SOS state
+   */
+  setSosStatus(sosState) {
+    if (sosState === this.sos) return false;
+    
+    this.sos = sosState;
+    if (sosState) {
+      this.status = 'SOS';
+      this.sosHandled = false;
+      this.sosHandledTime = null;
+      this.sosEmergencyDispatched = false;
+      this.sosEmergencyTime = null;
+    } else {
+      this.status = 'Active';
+    }
     
     return true;
   }
