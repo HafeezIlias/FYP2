@@ -20148,6 +20148,100 @@ function parseTimestamp(timestamp) {
 }
 
 /**
+ * Calculate the distance between two coordinates in meters using the Haversine formula
+ * @param {number} lat1 - Latitude of point 1
+ * @param {number} lon1 - Longitude of point 1
+ * @param {number} lat2 - Latitude of point 2
+ * @param {number} lon2 - Longitude of point 2
+ * @returns {number} Distance in meters
+ */
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371000; // Earth radius in meters
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const d = R * c;
+
+  return d; // Distance in meters
+}
+
+/**
+ * Determine hiker's movement status based on recent location logs
+ * @param {Array} logs - Array of log entries sorted by timestamp (newest first)
+ * @returns {string} Movement status: "Moving", "Active", "Resting", or "Unknown"
+ */
+function determineMovementStatus(logs) {
+  // Need at least 2 logs to determine movement
+  if (!logs || logs.length < 2) {
+    return "Unknown";
+  }
+
+  // Configuration values
+  const MOVING_THRESHOLD = 5; // meters per minute to be considered "Moving"
+  const ACTIVE_THRESHOLD = 2; // meters per minute to be considered "Active"
+  const TIME_WINDOW = 10 * 60 * 1000; // 10 minutes in milliseconds
+  
+  // Get the most recent log
+  const latestLog = logs[0];
+  const latestTime = parseTimestamp(latestLog.timestamp);
+  const latestLat = parseFloat(latestLog.latitude) || 0;
+  const latestLon = parseFloat(latestLog.longitude) || 0;
+  
+  // Filter logs that are within the time window
+  const recentLogs = logs.filter(log => {
+    const logTime = parseTimestamp(log.timestamp);
+    return (latestTime - logTime) <= TIME_WINDOW;
+  });
+  
+  // Calculate distances and times between consecutive points
+  let totalDistance = 0;
+  let totalTimeMinutes = 0;
+  
+  for (let i = 0; i < recentLogs.length - 1; i++) {
+    const currentLog = recentLogs[i];
+    const previousLog = recentLogs[i + 1];
+    
+    const currentLat = parseFloat(currentLog.latitude) || 0;
+    const currentLon = parseFloat(currentLog.longitude) || 0;
+    const previousLat = parseFloat(previousLog.latitude) || 0;
+    const previousLon = parseFloat(previousLog.longitude) || 0;
+    
+    const currentTime = parseTimestamp(currentLog.timestamp);
+    const previousTime = parseTimestamp(previousLog.timestamp);
+    
+    // Calculate distance between points
+    const distance = calculateDistance(currentLat, currentLon, previousLat, previousLon);
+    
+    // Calculate time difference in minutes
+    const timeDiffMinutes = (currentTime - previousTime) / (1000 * 60);
+    
+    // Only count valid measurements
+    if (timeDiffMinutes > 0) {
+      totalDistance += distance;
+      totalTimeMinutes += timeDiffMinutes;
+    }
+  }
+  
+  // Calculate average speed in meters per minute
+  const averageSpeed = totalTimeMinutes > 0 ? (totalDistance / totalTimeMinutes) : 0;
+  
+  // Determine status based on average speed
+  if (averageSpeed >= MOVING_THRESHOLD) {
+    return "Moving";
+  } else if (averageSpeed >= ACTIVE_THRESHOLD) {
+    return "Active";
+  } else {
+    return "Resting";
+  }
+}
+
+/**
  * Fetch hikers data from Firebase, getting the latest entry from logs for each hiker
  * @returns {Promise<Array>} Promise resolving to an array of hiker objects
  */
@@ -20189,14 +20283,20 @@ async function fetchHikersFromFirebase() {
         timestamp: Date.now()
       };
       
+      let logs = [];
+      let movementStatus = "Unknown";
+      
       if (nodeData.logs) {
         // Convert logs object to array and sort by timestamp
-        const logs = Object.values(nodeData.logs)
+        logs = Object.values(nodeData.logs)
           .sort((a, b) => parseTimestamp(b.timestamp) - parseTimestamp(a.timestamp));
         
         // Use the most recent log entry
         if (logs.length > 0) {
           trackingData = logs[0];
+          
+          // Determine movement status if there's enough data
+          movementStatus = determineMovementStatus(logs);
         }
       }
       
@@ -20207,8 +20307,15 @@ async function fetchHikersFromFirebase() {
       // Parse timestamp properly
       const timestamp = parseTimestamp(trackingData.timestamp);
       
-      // Determine status - SOS from tracking data, active from node level
-      const status = trackingData.sos_status ? 'SOS' : (isActive ? 'Active' : 'Inactive');
+      // Determine overall status
+      let status;
+      if (trackingData.sos_status) {
+        status = 'SOS';
+      } else if (!isActive) {
+        status = 'Inactive';
+      } else {
+        status = movementStatus;
+      }
       
       // Create a hiker object using the latest data
       const hiker = new Hiker(
@@ -20277,14 +20384,20 @@ function listenForHikersUpdates(callback) {
           timestamp: Date.now()
         };
         
+        let logs = [];
+        let movementStatus = "Unknown";
+        
         if (nodeData.logs) {
           // Convert logs object to array and sort by timestamp
-          const logs = Object.values(nodeData.logs)
+          logs = Object.values(nodeData.logs)
             .sort((a, b) => parseTimestamp(b.timestamp) - parseTimestamp(a.timestamp));
           
           // Use the most recent log entry
           if (logs.length > 0) {
             trackingData = logs[0];
+            
+            // Determine movement status if there's enough data
+            movementStatus = determineMovementStatus(logs);
           }
         }
         
@@ -20295,8 +20408,15 @@ function listenForHikersUpdates(callback) {
         // Parse timestamp properly
         const timestamp = parseTimestamp(trackingData.timestamp);
         
-        // Determine status - SOS from tracking data, active from node level
-        const status = trackingData.sos_status ? 'SOS' : (isActive ? 'Active' : 'Inactive');
+        // Determine overall status
+        let status;
+        if (trackingData.sos_status) {
+          status = 'SOS';
+        } else if (!isActive) {
+          status = 'Inactive';
+        } else {
+          status = movementStatus;
+        }
         
         // Create a hiker object using the latest data
         const hiker = new Hiker(
