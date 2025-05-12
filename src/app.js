@@ -319,19 +319,29 @@ class HikerTrackingApp {
     console.log('handleHikerClick called with:', hikerOrId);
     
     let hiker;
+    let hikerId;
     
     // Check if we received a hiker object or just an ID
     if (typeof hikerOrId === 'object' && hikerOrId !== null) {
       hiker = hikerOrId;
+      hikerId = hiker.id;
     } else {
-      // We received an ID, find the hiker
-      const hikerId = hikerOrId;
+      // We received an ID
+      hikerId = hikerOrId;
+      // Always find the hiker from the main hikers array to get the latest data
       hiker = this.hikers.find(h => h.id == hikerId);
       
       if (!hiker) {
         console.error(`Hiker with ID ${hikerId} not found`);
         return;
       }
+    }
+    
+    // Double check to make sure we have the latest data
+    const latestHiker = this.hikers.find(h => h.id == hikerId);
+    if (latestHiker) {
+      // Use the latest hiker data from the main array
+      hiker = latestHiker;
     }
     
     console.log('Opening modal for hiker:', hiker);
@@ -457,6 +467,8 @@ class HikerTrackingApp {
    * Render all UI components
    */
   renderAll() {
+    console.log('Rendering all UI components with hikers:', this.hikers);
+    
     // First update the positions of existing markers without recreating them
     this.hikers.forEach(hiker => {
       this.updateMarkerPosition(hiker);
@@ -482,11 +494,16 @@ class HikerTrackingApp {
       });
     }
     
-    // Update modal if it's open
+    // Update modal if it's open - make sure to get the most recent hiker data
     const activeHikerId = this.modal.activeHikerId;
     if (activeHikerId !== null) {
+      // Find the hiker using the latest data
       const activeHiker = this.hikers.find(h => h.id === activeHikerId);
       if (activeHiker) {
+        console.log('Updating modal with latest hiker data:', activeHiker);
+        // First update the marker position for this hiker again to ensure it's in sync
+        this.updateMarkerPosition(activeHiker);
+        // Then update the modal content with the latest data
         this.modal.updateModalContent(activeHiker);
       }
     }

@@ -22,7 +22,7 @@ const database = getDatabase(app);
 
 /**
  * Safely parse timestamp from server data
- * @param {*} timestamp - Timestamp from server
+ * @param {*} timestamp - Timestamp from server (could be in time field too)
  * @returns {number} Valid timestamp in milliseconds
  */
 function parseTimestamp(timestamp) {
@@ -42,7 +42,34 @@ function parseTimestamp(timestamp) {
   
   // If it's a string, try to parse it
   if (typeof timestamp === 'string') {
-    // Try parsing as number first
+    // Handle time format like "03:39:05" (UTC time)
+    if (timestamp.includes(':')) {
+      try {
+        // Get current date in UTC
+        const now = new Date();
+        const utcYear = now.getUTCFullYear();
+        const utcMonth = now.getUTCMonth();
+        const utcDay = now.getUTCDate();
+        
+        // Parse hours, minutes, seconds
+        const [hours, minutes, seconds] = timestamp.split(':').map(Number);
+        
+        // Create UTC date
+        const date = new Date(Date.UTC(utcYear, utcMonth, utcDay, hours, minutes, seconds));
+        
+        console.log(`Parsed UTC time string "${timestamp}" to:`, {
+          utcTime: date.toUTCString(),
+          localTime: date.toString(),
+          milliseconds: date.getTime()
+        });
+        
+        return date.getTime();
+      } catch (error) {
+        console.error('Error parsing time string:', error);
+      }
+    }
+    
+    // Try parsing as number
     const numericTimestamp = Number(timestamp);
     if (!isNaN(numericTimestamp)) {
       // If it's a small number, assume it's seconds and convert to milliseconds
@@ -56,6 +83,7 @@ function parseTimestamp(timestamp) {
   }
   
   // Default to current time if parsing fails
+  console.warn(`Failed to parse timestamp: ${timestamp}, using current time instead`);
   return Date.now();
 }
 
@@ -101,13 +129,13 @@ function determineMovementStatus(logs) {
   
   // Get the most recent log
   const latestLog = logs[0];
-  const latestTime = parseTimestamp(latestLog.timestamp);
+  const latestTime = parseTimestamp(latestLog.timestamp || latestLog.time);
   const latestLat = parseFloat(latestLog.latitude) || 0;
   const latestLon = parseFloat(latestLog.longitude) || 0;
   
   // Filter logs that are within the time window
   const recentLogs = logs.filter(log => {
-    const logTime = parseTimestamp(log.timestamp);
+    const logTime = parseTimestamp(log.timestamp || log.time);
     return (latestTime - logTime) <= TIME_WINDOW;
   });
   
@@ -124,8 +152,8 @@ function determineMovementStatus(logs) {
     const previousLat = parseFloat(previousLog.latitude) || 0;
     const previousLon = parseFloat(previousLog.longitude) || 0;
     
-    const currentTime = parseTimestamp(currentLog.timestamp);
-    const previousTime = parseTimestamp(previousLog.timestamp);
+    const currentTime = parseTimestamp(currentLog.timestamp || currentLog.time);
+    const previousTime = parseTimestamp(previousLog.timestamp || previousLog.time);
     
     // Calculate distance between points
     const distance = calculateDistance(currentLat, currentLon, previousLat, previousLon);
@@ -201,11 +229,23 @@ export async function fetchHikersFromFirebase() {
       if (nodeData.logs) {
         // Convert logs object to array and sort by timestamp
         logs = Object.values(nodeData.logs)
-          .sort((a, b) => parseTimestamp(b.timestamp) - parseTimestamp(a.timestamp));
+          .sort((a, b) => {
+            // Use time field if timestamp is not available
+            const aTime = a.timestamp || a.time;
+            const bTime = b.timestamp || b.time;
+            return parseTimestamp(bTime) - parseTimestamp(aTime);
+          });
         
         // Use the most recent log entry
         if (logs.length > 0) {
           trackingData = logs[0];
+          console.log(`Using latest log for ${nodeKey}:`, {
+            time: trackingData.time,
+            latitude: trackingData.latitude,
+            longitude: trackingData.longitude,
+            battery: trackingData.battery,
+            sos: trackingData.sos_status
+          });
           
           // Determine movement status if there's enough data
           movementStatus = determineMovementStatus(logs);
@@ -216,8 +256,8 @@ export async function fetchHikersFromFirebase() {
       const latitude = parseFloat(trackingData.latitude) || 0;
       const longitude = parseFloat(trackingData.longitude) || 0;
       
-      // Parse timestamp properly
-      const timestamp = parseTimestamp(trackingData.timestamp);
+      // Parse timestamp properly - look for time field if timestamp is not present
+      const timestamp = parseTimestamp(trackingData.timestamp || trackingData.time);
       
       // Determine overall status
       let status;
@@ -230,8 +270,23 @@ export async function fetchHikersFromFirebase() {
       }
       
       // Create a hiker object using the latest data
+      let hikerId = nodeKey;
+      if (trackingData.node_id) {
+        if (typeof trackingData.node_id === 'string') {
+          hikerId = trackingData.node_id.replace(/"/g, ''); // Remove quotes if present
+        } else {
+          hikerId = String(trackingData.node_id);
+        }
+      }
+      
+      console.log(`Creating hiker with ID: ${hikerId} (from ${nodeKey})`, {
+        coordinates: [latitude, longitude],
+        parsedTimestamp: new Date(timestamp).toLocaleString(),
+        originalTime: trackingData.time
+      });
+      
       const hiker = new Hiker(
-        nodeKey,
+        hikerId,
         name,
         latitude,
         longitude,
@@ -302,11 +357,23 @@ export function listenForHikersUpdates(callback) {
         if (nodeData.logs) {
           // Convert logs object to array and sort by timestamp
           logs = Object.values(nodeData.logs)
-            .sort((a, b) => parseTimestamp(b.timestamp) - parseTimestamp(a.timestamp));
+            .sort((a, b) => {
+              // Use time field if timestamp is not available
+              const aTime = a.timestamp || a.time;
+              const bTime = b.timestamp || b.time;
+              return parseTimestamp(bTime) - parseTimestamp(aTime);
+            });
           
           // Use the most recent log entry
           if (logs.length > 0) {
             trackingData = logs[0];
+            console.log(`Using latest log for ${nodeKey}:`, {
+              time: trackingData.time,
+              latitude: trackingData.latitude,
+              longitude: trackingData.longitude,
+              battery: trackingData.battery,
+              sos: trackingData.sos_status
+            });
             
             // Determine movement status if there's enough data
             movementStatus = determineMovementStatus(logs);
@@ -317,8 +384,8 @@ export function listenForHikersUpdates(callback) {
         const latitude = parseFloat(trackingData.latitude) || 0;
         const longitude = parseFloat(trackingData.longitude) || 0;
         
-        // Parse timestamp properly
-        const timestamp = parseTimestamp(trackingData.timestamp);
+        // Parse timestamp properly - look for time field if timestamp is not present
+        const timestamp = parseTimestamp(trackingData.timestamp || trackingData.time);
         
         // Determine overall status
         let status;
@@ -331,8 +398,23 @@ export function listenForHikersUpdates(callback) {
         }
         
         // Create a hiker object using the latest data
+        let hikerId = nodeKey;
+        if (trackingData.node_id) {
+          if (typeof trackingData.node_id === 'string') {
+            hikerId = trackingData.node_id.replace(/"/g, ''); // Remove quotes if present
+          } else {
+            hikerId = String(trackingData.node_id);
+          }
+        }
+        
+        console.log(`Creating hiker with ID: ${hikerId} (from ${nodeKey})`, {
+          coordinates: [latitude, longitude],
+          parsedTimestamp: new Date(timestamp).toLocaleString(),
+          originalTime: trackingData.time
+        });
+        
         const hiker = new Hiker(
-          nodeKey,
+          hikerId,
           name,
           latitude,
           longitude,

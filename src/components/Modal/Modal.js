@@ -288,6 +288,12 @@ class ModalComponent {
     // Store reference to active hiker
     this.activeHiker = hiker;
     
+    console.log(`Updating modal for hiker ${hiker.id} with coordinates:`, {
+      lat: hiker.lat,
+      lon: hiker.lon,
+      timestamp: new Date(hiker.lastUpdate).toLocaleTimeString()
+    });
+    
     // Store current values to check for changes
     const element = document.getElementById(this.statusId);
     const prevStatus = element ? element.textContent : '';
@@ -297,6 +303,9 @@ class ModalComponent {
     
     const coordsElement = document.getElementById(this.coordsId);
     const prevCoords = coordsElement ? coordsElement.textContent : '';
+    
+    const nameElement = document.getElementById(this.nameId);
+    const prevName = nameElement ? nameElement.textContent : '';
     
     // Update all content
     document.getElementById(this.nameId).textContent = hiker.name;
@@ -310,26 +319,28 @@ class ModalComponent {
     }
     
     document.getElementById(this.lastUpdateId).textContent = new Date(hiker.lastUpdate).toLocaleTimeString();
-    document.getElementById(this.coordsId).textContent = `${hiker.lat.toFixed(5)}, ${hiker.lon.toFixed(5)}`;
+    
+    // Format and update coordinates
+    const formattedCoords = `${hiker.lat.toFixed(5)}, ${hiker.lon.toFixed(5)}`;
+    document.getElementById(this.coordsId).textContent = formattedCoords;
     
     // Update SOS status and actions
     this.updateSosStatus(hiker);
     
-    // Flash updates for changed values
-    if (prevStatus !== hiker.status) {
-      flashUpdate(this.statusId);
-    }
-    
-    if (prevBattery !== `${Math.round(hiker.battery)}%`) {
-      flashUpdate(this.batteryId);
-    }
-    
-    if (prevCoords !== `${hiker.lat.toFixed(5)}, ${hiker.lon.toFixed(5)}`) {
-      flashUpdate(this.coordsId);
-    }
-    
-    // Always flash the last update time
+    // Flash updates for all values regardless of changes
+    flashUpdate(this.nameId);
+    flashUpdate(this.statusId);
+    flashUpdate(this.batteryId);
+    flashUpdate(this.coordsId);
     flashUpdate(this.lastUpdateId);
+    
+    // Also update battery fill visual indication
+    if (batteryFill) {
+      batteryFill.classList.add('updating');
+      setTimeout(() => {
+        batteryFill.classList.remove('updating');
+      }, 500);
+    }
   }
 
   /**
