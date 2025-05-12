@@ -1,0 +1,247 @@
+/* Track Safety Component Styles */
+
+.tracks-list {
+  margin-top: 20px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.track-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f8f9fa;
+  padding: 12px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  border-left: 4px solid #3388ff;
+}
+
+.track-info {
+  flex: 1;
+}
+
+.track-name {
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-size: 14px;
+  color: #2d3748;
+}
+
+.track-details {
+  font-size: 13px;
+  color: #718096;
+}
+
+.track-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.track-action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 14px;
+}
+
+.track-action-btn:hover {
+  background-color: rgba(0,0,0,0.05);
+}
+
+.edit-track {
+  color: #4299e1;
+}
+
+.delete-track {
+  color: #f56565;
+}
+
+.creation-instructions {
+  margin: 15px 0;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border-left: 4px solid #4299e1;
+}
+
+.creation-instructions h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 10px;
+}
+
+.creation-instructions ol {
+  font-size: 14px;
+  color: #4a5568;
+  padding-left: 20px;
+}
+
+.creation-instructions li {
+  margin-bottom: 5px;
+}
+
+.track-status {
+  margin-top: 15px;
+  padding: 10px;
+  display: none;
+  font-size: 14px;
+}
+
+.track-status.success {
+  display: block;
+  background-color: #d4edda;
+  color: #155724;
+  border-radius: 4px;
+}
+
+.track-status.error {
+  display: block;
+  background-color: #f8d7da;
+  color: #721c24;
+  border-radius: 4px;
+}
+
+.no-tracks-message {
+  padding: 20px;
+  text-align: center;
+  color: #718096;
+  font-style: italic;
+  font-size: 14px;
+}
+
+/* Modal style overrides */
+#track-create-modal .modal-content {
+  font-family: inherit;
+}
+
+#track-create-modal .modal-header h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+#track-create-modal .modal-body {
+  font-size: 14px;
+}
+
+#track-create-modal .form-group {
+  margin-bottom: 15px;
+}
+
+#track-create-modal label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: #4a5568;
+  font-size: 14px;
+}
+
+#track-create-modal input[type="text"],
+#track-create-modal textarea {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+#track-create-modal input[type="text"]:focus,
+#track-create-modal textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.3);
+  border-color: #4299e1;
+}
+
+#track-create-modal textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+#track-create-modal .close {
+  font-size: 24px;
+  color: #a0aec0;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+#track-create-modal .close:hover {
+  color: #4a5568;
+}
+
+#track-create-modal .btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  font-size: 14px;
+}
+
+#track-create-modal .btn-primary {
+  background-color: #4299e1;
+  color: white;
+}
+
+#track-create-modal .btn-primary:hover {
+  background-color: #3182ce;
+}
+
+#track-create-modal .btn-secondary {
+  background-color: #edf2f7;
+  color: #4a5568;
+}
+
+#track-create-modal .btn-secondary:hover {
+  background-color: #e2e8f0;
+}
+
+#track-create-modal .btn-success {
+  background-color: #48bb78;
+  color: white;
+}
+
+#track-create-modal .btn-success:hover {
+  background-color: #38a169;
+}
+
+#track-create-modal .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Floating panel styles */
+.modal.floating {
+  display: block;
+  background-color: transparent;
+  pointer-events: none;
+}
+
+.modal.floating .modal-content {
+  width: 300px;
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  opacity: 0.9;
+  pointer-events: auto;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+
+.modal.floating .modal-body {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.modal.floating .form-group, 
+.modal.floating .creation-instructions {
+  display: none;
+}
+
+.modal.floating.drawing .track-status {
+  display: block;
+} 

@@ -18891,6 +18891,23 @@ class MapComponent {
       this.centerOnHiker(this.trackingHikerId);
     }
   }
+
+  /**
+   * Get the map instance
+   * @returns {Object} The Leaflet map instance
+   */
+  getMap() {
+    return this.map;
+  }
+
+  /**
+   * Get a hiker marker by ID
+   * @param {string|number} hikerId - The ID of the hiker
+   * @returns {Object|null} The Leaflet marker or null if not found
+   */
+  getHikerMarker(hikerId) {
+    return this.hikerMarkers?.[hikerId] || null;
+  }
 }
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (MapComponent); 
@@ -19337,10 +19354,17 @@ class SettingsComponent {
       notifications: {
         sosAlerts: true,
         batteryAlerts: true,
-        batteryThreshold: 20
+        batteryThreshold: 20,
+        trackDeviationAlerts: true,
+        trackDeviationThreshold: 50
       },
       dataSource: {
         useFirebase: true
+      },
+      safety: {
+        enableTrackSafety: true,
+        defaultTrackWidth: 50,
+        highlightUnsafeHikers: true
       }
     };
     
@@ -19510,6 +19534,42 @@ class SettingsComponent {
         }
       });
       
+      // Track deviation notifications
+      document.getElementById('track-deviation-alerts')?.addEventListener('change', (e) => {
+        this.settings.notifications.trackDeviationAlerts = e.target.checked;
+        if (this.callbacks?.onTrackDeviationAlertsChange) {
+          this.callbacks.onTrackDeviationAlertsChange(e.target.checked);
+        }
+      });
+      
+      // Track deviation threshold change
+      document.getElementById('track-deviation-threshold')?.addEventListener('input', (e) => {
+        const thresholdValue = parseInt(e.target.value);
+        const thresholdElement = document.getElementById('track-deviation-threshold-value');
+        if (thresholdElement) {
+          thresholdElement.textContent = `${thresholdValue}m`;
+        }
+        this.settings.notifications.trackDeviationThreshold = thresholdValue;
+        if (this.callbacks?.onTrackDeviationThresholdChange) {
+          this.callbacks.onTrackDeviationThresholdChange(thresholdValue);
+        }
+      });
+      
+      // Safety settings
+      document.getElementById('enable-track-safety')?.addEventListener('change', (e) => {
+        this.settings.safety.enableTrackSafety = e.target.checked;
+        if (this.callbacks?.onTrackSafetyChange) {
+          this.callbacks.onTrackSafetyChange(e.target.checked);
+        }
+      });
+      
+      document.getElementById('highlight-unsafe-hikers')?.addEventListener('change', (e) => {
+        this.settings.safety.highlightUnsafeHikers = e.target.checked;
+        if (this.callbacks?.onHighlightUnsafeHikersChange) {
+          this.callbacks.onHighlightUnsafeHikersChange(e.target.checked);
+        }
+      });
+      
       // Firebase data source toggle
       document.getElementById('use-firebase')?.addEventListener('change', (e) => {
         if (!this.settings.dataSource) {
@@ -19620,6 +19680,32 @@ class SettingsComponent {
         if (batteryThresholdValue) {
           batteryThresholdValue.textContent = `${this.settings.notifications.batteryThreshold}%`;
         }
+      }
+      
+      // Track deviation notifications
+      const trackDeviationAlertsToggle = document.getElementById('track-deviation-alerts');
+      if (trackDeviationAlertsToggle) {
+        trackDeviationAlertsToggle.checked = this.settings.notifications.trackDeviationAlerts;
+      }
+      
+      const trackDeviationThresholdSlider = document.getElementById('track-deviation-threshold');
+      if (trackDeviationThresholdSlider) {
+        trackDeviationThresholdSlider.value = this.settings.notifications.trackDeviationThreshold;
+        const trackDeviationThresholdValue = document.getElementById('track-deviation-threshold-value');
+        if (trackDeviationThresholdValue) {
+          trackDeviationThresholdValue.textContent = `${this.settings.notifications.trackDeviationThreshold}m`;
+        }
+      }
+      
+      // Safety settings
+      const trackSafetyToggle = document.getElementById('enable-track-safety');
+      if (trackSafetyToggle) {
+        trackSafetyToggle.checked = this.settings.safety.enableTrackSafety;
+      }
+      
+      const highlightUnsafeHikersToggle = document.getElementById('highlight-unsafe-hikers');
+      if (highlightUnsafeHikersToggle) {
+        highlightUnsafeHikersToggle.checked = this.settings.safety.highlightUnsafeHikers;
       }
       
       // Data source settings
@@ -19749,6 +19835,510 @@ class SettingsComponent {
 }
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (SettingsComponent); 
+
+/***/ }),
+
+/***/ "./src/components/Settings/TrackSafetySettings.js":
+/*!********************************************************!*\
+  !*** ./src/components/Settings/TrackSafetySettings.js ***!
+  \********************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/**
+ * Track Safety Settings Component
+ * Allows administrators to create, edit, and manage safety tracks
+ */
+class TrackSafetySettings {
+  /**
+   * Initialize the Track Safety Settings component
+   * @param {Object} trackManager - Instance of TrackSafetyManager
+   * @param {Object} map - Map instance for visualization
+   */
+  constructor(trackManager, map = null) {
+    this.trackManager = trackManager;
+    this.map = map;
+    this.containerId = 'track-safety-settings';
+    this.modalId = 'track-create-modal';
+    this.isCreatingTrack = false;
+    this.editingTrackId = null;
+    
+    // Initialize DOM references
+    this.container = null;
+    this.createBtn = null;
+    this.tracksList = null;
+    this.modal = null;
+    
+    // Bind methods to this instance
+    this.startTrackCreation = this.startTrackCreation.bind(this);
+    this.cancelTrackCreation = this.cancelTrackCreation.bind(this);
+    this.saveTrack = this.saveTrack.bind(this);
+    this.renderTracksList = this.renderTracksList.bind(this);
+  }
+  
+  /**
+   * Initialize the component
+   */
+  init() {
+    // Create the track safety settings container if it doesn't exist
+    this.createContainer();
+    
+    // Set up event listeners
+    this.setupEventListeners();
+    
+    // Render the initial tracks list
+    this.renderTracksList();
+    
+    return this;
+  }
+  
+  /**
+   * Create the container and modal elements
+   */
+  createContainer() {
+    // Check if container already exists
+    this.container = document.getElementById(this.containerId);
+    if (!this.container) {
+      // Create the container element
+      this.container = document.createElement('div');
+      this.container.id = this.containerId;
+      this.container.className = 'settings-section';
+      
+      // Create the section header
+      const header = document.createElement('h3');
+      header.textContent = 'Safety Tracks Management';
+      this.container.appendChild(header);
+      
+      // Create description
+      const description = document.createElement('p');
+      description.textContent = 'Create and manage hiking tracks with safety corridors to ensure hikers stay on safe paths.';
+      this.container.appendChild(description);
+      
+      // Create the create button
+      this.createBtn = document.createElement('button');
+      this.createBtn.id = 'create-track-btn';
+      this.createBtn.className = 'btn btn-primary';
+      this.createBtn.textContent = 'Create New Track';
+      this.container.appendChild(this.createBtn);
+      
+      // Create tracks list container
+      this.tracksList = document.createElement('div');
+      this.tracksList.id = 'tracks-list';
+      this.tracksList.className = 'tracks-list';
+      this.container.appendChild(this.tracksList);
+      
+      // Add to the settings modal - FIX: Use the correct container selector
+      const settingsModalContent = document.getElementById('track-safety-settings-container');
+      if (settingsModalContent) {
+        settingsModalContent.appendChild(this.container);
+      } else {
+        // Fallback to main settings content if container not found
+        const fallbackContainer = document.querySelector('#settings-modal .settings-modal-content .modal-body');
+        if (fallbackContainer) {
+          fallbackContainer.appendChild(this.container);
+        } else {
+          console.warn('Settings modal content not found');
+        }
+      }
+    }
+    
+    // Create the track creation modal if it doesn't exist
+    this.modal = document.getElementById(this.modalId);
+    if (!this.modal) {
+      this.modal = document.createElement('div');
+      this.modal.id = this.modalId;
+      this.modal.className = 'modal';
+      
+      this.modal.innerHTML = `
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3 id="track-modal-title">Create New Safety Track</h3>
+            <span class="close" id="close-track-modal">&times;</span>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="track-name">Track Name:</label>
+              <input type="text" id="track-name" placeholder="Enter track name">
+            </div>
+            <div class="form-group">
+              <label for="track-description">Description:</label>
+              <textarea id="track-description" placeholder="Describe this track (optional)"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="safety-width">Safety Corridor Width (meters):</label>
+              <input type="range" id="safety-width" min="10" max="200" value="50">
+              <span id="safety-width-value">50m</span>
+            </div>
+            <div id="creation-instructions" class="creation-instructions">
+              <h4>Track Creation Instructions:</h4>
+              <ol>
+                <li>Click "Start Drawing" to begin creating the track</li>
+                <li>Click on the map to add waypoints (minimum 2 points)</li>
+                <li>The track will be visualized as you add points</li>
+                <li>When finished, click "Save Track"</li>
+              </ol>
+            </div>
+            <div id="track-status" class="track-status"></div>
+          </div>
+          <div class="modal-footer">
+            <button id="start-drawing-btn" class="btn btn-primary">Start Drawing</button>
+            <button id="cancel-drawing-btn" class="btn btn-secondary" style="display: none;">Cancel Drawing</button>
+            <button id="save-track-btn" class="btn btn-success" disabled>Save Track</button>
+            <button id="cancel-track-btn" class="btn btn-secondary">Cancel</button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(this.modal);
+    }
+  }
+  
+  /**
+   * Set up event listeners
+   */
+  setupEventListeners() {
+    // Create track button
+    this.createBtn?.addEventListener('click', () => {
+      this.openTrackModal();
+    });
+    
+    // Close modal button
+    const closeModalBtn = document.getElementById('close-track-modal');
+    if (closeModalBtn) {
+      closeModalBtn.addEventListener('click', () => {
+        this.closeTrackModal();
+      });
+    }
+    
+    // Cancel track creation button
+    document.getElementById('cancel-track-btn')?.addEventListener('click', () => {
+      this.closeTrackModal();
+    });
+    
+    // Start drawing button
+    document.getElementById('start-drawing-btn')?.addEventListener('click', () => {
+      this.startTrackCreation();
+    });
+    
+    // Cancel drawing button
+    document.getElementById('cancel-drawing-btn')?.addEventListener('click', () => {
+      this.cancelTrackCreation();
+    });
+    
+    // Save track button
+    document.getElementById('save-track-btn')?.addEventListener('click', () => {
+      this.saveTrack();
+    });
+    
+    // Safety width slider
+    document.getElementById('safety-width')?.addEventListener('input', (e) => {
+      const widthValue = parseInt(e.target.value);
+      const widthDisplay = document.getElementById('safety-width-value');
+      if (widthDisplay) {
+        widthDisplay.textContent = `${widthValue}m`;
+      }
+    });
+  }
+  
+  /**
+   * Open the track creation modal
+   */
+  openTrackModal(trackId = null) {
+    if (!this.modal) return;
+    
+    // Reset the form
+    document.getElementById('track-name').value = '';
+    document.getElementById('track-description').value = '';
+    document.getElementById('safety-width').value = '50';
+    document.getElementById('safety-width-value').textContent = '50m';
+    
+    // Reset track status
+    const trackStatus = document.getElementById('track-status');
+    trackStatus.textContent = '';
+    trackStatus.className = 'track-status';
+    
+    // Show/hide appropriate buttons
+    document.getElementById('start-drawing-btn').style.display = 'inline-block';
+    document.getElementById('cancel-drawing-btn').style.display = 'none';
+    document.getElementById('save-track-btn').disabled = true;
+    
+    // Set modal title based on whether we're editing or creating
+    const modalTitle = document.getElementById('track-modal-title');
+    if (trackId) {
+      this.editingTrackId = trackId;
+      const track = this.trackManager.getTrackById(trackId);
+      
+      if (track) {
+        modalTitle.textContent = 'Edit Safety Track';
+        
+        // Fill in form with track data
+        document.getElementById('track-name').value = track.name;
+        document.getElementById('track-description').value = track.description || '';
+        document.getElementById('safety-width').value = track.safetyWidth;
+        document.getElementById('safety-width-value').textContent = `${track.safetyWidth}m`;
+      }
+    } else {
+      this.editingTrackId = null;
+      modalTitle.textContent = 'Create New Safety Track';
+    }
+    
+    // Show the modal
+    this.modal.classList.add('active');
+  }
+  
+  /**
+   * Close the track creation modal
+   */
+  closeTrackModal() {
+    if (!this.modal) return;
+    
+    // If we were in the middle of creating a track, cancel it
+    if (this.isCreatingTrack) {
+      this.cancelTrackCreation();
+    }
+    
+    // Hide the modal
+    this.modal.classList.remove('active');
+    this.editingTrackId = null;
+  }
+  
+  /**
+   * Start creating a track
+   */
+  startTrackCreation() {
+    if (!this.map || !this.trackManager) {
+      this.showTrackStatus('Map or track manager not initialized', 'error');
+      return;
+    }
+    
+    // Show/hide appropriate buttons
+    document.getElementById('start-drawing-btn').style.display = 'none';
+    document.getElementById('cancel-drawing-btn').style.display = 'inline-block';
+    document.getElementById('save-track-btn').disabled = false;
+    
+    // Convert modal to floating panel instead of closing it
+    const settingsModal = document.getElementById('settings-modal');
+    if (settingsModal) {
+      settingsModal.classList.remove('active');
+    }
+    
+    // Convert track modal to floating mode
+    this.modal.classList.add('floating');
+    this.modal.classList.add('drawing');
+    
+    // Show instructions
+    this.showTrackStatus('Click on the map to add waypoints to your track', 'success');
+    
+    // Start track creation mode
+    this.isCreatingTrack = true;
+    
+    // If editing an existing track
+    if (this.editingTrackId) {
+      this.trackManager.editTrack(this.editingTrackId, this.onTrackCreated.bind(this));
+    } else {
+      this.trackManager.startTrackCreation(this.onTrackCreated.bind(this));
+    }
+  }
+  
+  /**
+   * Cancel track creation
+   */
+  cancelTrackCreation() {
+    if (!this.isCreatingTrack) return;
+    
+    // Cancel track creation in the manager
+    this.trackManager.cancelTrackCreation();
+    
+    // Reset UI state
+    this.isCreatingTrack = false;
+    document.getElementById('start-drawing-btn').style.display = 'inline-block';
+    document.getElementById('cancel-drawing-btn').style.display = 'none';
+    document.getElementById('save-track-btn').disabled = true;
+    
+    // Remove floating panel mode
+    this.modal.classList.remove('floating');
+    this.modal.classList.remove('drawing');
+    
+    // Show the settings modal again
+    const settingsModal = document.getElementById('settings-modal');
+    if (settingsModal) {
+      settingsModal.classList.add('active');
+    }
+    
+    this.showTrackStatus('Track creation cancelled', 'error');
+  }
+  
+  /**
+   * Save the current track
+   */
+  saveTrack() {
+    const nameInput = document.getElementById('track-name');
+    const descriptionInput = document.getElementById('track-description');
+    const safetyWidthInput = document.getElementById('safety-width');
+    
+    if (!nameInput || !descriptionInput || !safetyWidthInput) {
+      return;
+    }
+    
+    const name = nameInput.value.trim();
+    const description = descriptionInput.value.trim();
+    const safetyWidth = parseInt(safetyWidthInput.value);
+    
+    if (!name) {
+      this.showTrackStatus('Please enter a track name', 'error');
+      return;
+    }
+    
+    // Save the track
+    const trackId = this.trackManager.saveTrack(name, safetyWidth, description);
+    if (!trackId) {
+      this.showTrackStatus('Failed to save track. Make sure you have at least 2 points.', 'error');
+      return;
+    }
+    
+    // Reset UI state
+    this.isCreatingTrack = false;
+    
+    // Remove floating panel mode
+    this.modal.classList.remove('floating');
+    this.modal.classList.remove('drawing');
+    
+    // Show the settings modal again
+    const settingsModal = document.getElementById('settings-modal');
+    if (settingsModal) {
+      settingsModal.classList.add('active');
+    }
+    
+    // Update the tracks list
+    this.renderTracksList();
+    
+    // Show success message
+    this.showTrackStatus('Track saved successfully!', 'success');
+    
+    // Reset the form for next time
+    nameInput.value = '';
+    descriptionInput.value = '';
+    safetyWidthInput.value = '50';
+    document.getElementById('safety-width-value').textContent = '50m';
+    
+    // Reset buttons
+    document.getElementById('start-drawing-btn').style.display = 'inline-block';
+    document.getElementById('cancel-drawing-btn').style.display = 'none';
+    document.getElementById('save-track-btn').disabled = true;
+    
+    // Close the modal
+    this.closeTrackModal();
+  }
+  
+  /**
+   * Callback when track creation is complete
+   * @param {Object} track - The created track
+   */
+  onTrackCreated(track) {
+    this.closeTrackModal();
+    this.renderTracksList();
+  }
+  
+  /**
+   * Show a status message in the track modal
+   * @param {string} message - The message to display
+   * @param {string} type - 'success' or 'error'
+   */
+  showTrackStatus(message, type = 'success') {
+    const statusElement = document.getElementById('track-status');
+    if (!statusElement) return;
+    
+    statusElement.textContent = message;
+    statusElement.className = `track-status ${type}`;
+  }
+  
+  /**
+   * Render the list of tracks
+   */
+  renderTracksList() {
+    if (!this.tracksList) return;
+    
+    // Clear the current list
+    this.tracksList.innerHTML = '';
+    
+    // Get all tracks
+    const tracks = this.trackManager.getAllTracks();
+    
+    if (tracks.length === 0) {
+      const noTracksMessage = document.createElement('div');
+      noTracksMessage.className = 'no-tracks-message';
+      noTracksMessage.textContent = 'No safety tracks created yet. Click "Create New Track" to add one.';
+      this.tracksList.appendChild(noTracksMessage);
+      return;
+    }
+    
+    // Create track items
+    tracks.forEach(track => {
+      const trackItem = document.createElement('div');
+      trackItem.className = 'track-item';
+      trackItem.dataset.trackId = track.id;
+      
+      // Track info
+      const trackInfo = document.createElement('div');
+      trackInfo.className = 'track-info';
+      
+      const trackName = document.createElement('div');
+      trackName.className = 'track-name';
+      trackName.textContent = track.name;
+      trackInfo.appendChild(trackName);
+      
+      const trackDetails = document.createElement('div');
+      trackDetails.className = 'track-details';
+      trackDetails.textContent = `${track.points.length} waypoints • ${track.safetyWidth}m safety corridor`;
+      trackInfo.appendChild(trackDetails);
+      
+      trackItem.appendChild(trackInfo);
+      
+      // Track actions
+      const trackActions = document.createElement('div');
+      trackActions.className = 'track-actions';
+      
+      const editButton = document.createElement('button');
+      editButton.className = 'track-action-btn edit-track';
+      editButton.textContent = 'Edit';
+      editButton.addEventListener('click', () => {
+        this.openTrackModal(track.id);
+      });
+      trackActions.appendChild(editButton);
+      
+      const deleteButton = document.createElement('button');
+      deleteButton.className = 'track-action-btn delete-track';
+      deleteButton.textContent = 'Delete';
+      deleteButton.addEventListener('click', () => {
+        if (confirm(`Are you sure you want to delete the track "${track.name}"?`)) {
+          this.trackManager.deleteTrack(track.id);
+          this.renderTracksList();
+        }
+      });
+      trackActions.appendChild(deleteButton);
+      
+      trackItem.appendChild(trackActions);
+      
+      this.tracksList.appendChild(trackItem);
+    });
+  }
+  
+  /**
+   * Set the map reference
+   * @param {Object} map - The map object
+   */
+  setMap(map) {
+    this.map = map;
+    if (this.trackManager) {
+      this.trackManager.setMap(map);
+    }
+  }
+}
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (TrackSafetySettings); 
 
 /***/ }),
 
@@ -20066,6 +20656,1114 @@ class SidebarComponent {
 }
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (SidebarComponent); 
+
+/***/ }),
+
+/***/ "./src/modules/TrackSafetyModule.js":
+/*!******************************************!*\
+  !*** ./src/modules/TrackSafetyModule.js ***!
+  \******************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _utils_TrackSafetyManager__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/TrackSafetyManager */ "./src/utils/TrackSafetyManager.js");
+/* harmony import */ var _components_Settings_TrackSafetySettings__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../components/Settings/TrackSafetySettings */ "./src/components/Settings/TrackSafetySettings.js");
+/**
+ * Track Safety Module - Integrates track safety features into the application
+ */
+
+
+
+class TrackSafetyModule {
+  /**
+   * Initialize the Track Safety Module
+   * @param {Object} app - Reference to the main application
+   * @param {Object} map - Reference to the map component
+   * @param {Object} hikerManager - Reference to the hiker manager
+   * @param {Object} notificationManager - Reference to the notification manager
+   */
+  constructor(app, map, hikerManager, notificationManager) {
+    this.app = app;
+    this.map = map;
+    this.hikerManager = hikerManager;
+    this.notificationManager = notificationManager;
+    
+    // Initialize the track safety manager
+    this.trackManager = new _utils_TrackSafetyManager__WEBPACK_IMPORTED_MODULE_0__["default"](map?.getMap());
+    
+    // Initialize track safety settings component
+    this.safetySettings = new _components_Settings_TrackSafetySettings__WEBPACK_IMPORTED_MODULE_1__["default"](this.trackManager, map?.getMap());
+    
+    // Initialize track safety state
+    this.enabled = true;
+    this.highlightUnsafeHikers = true;
+    this.trackDeviationThreshold = 50;
+    this.trackDeviationNotificationsEnabled = true;
+    
+    // Store references to hikers that are off track
+    this.offTrackHikers = new Set();
+    
+    // Bind methods
+    this.updateHikerSafety = this.updateHikerSafety.bind(this);
+    this.setEnabled = this.setEnabled.bind(this);
+  }
+  
+  /**
+   * Initialize the module
+   */
+  init() {
+    // Initialize track safety settings UI
+    this.safetySettings.init();
+    
+    // Start monitoring hikers if enabled
+    if (this.enabled) {
+      this.startMonitoring();
+    }
+    
+    // Set up hook for when hikers are updated
+    if (this.hikerManager) {
+      this.hikerManager.onHikersUpdated(this.checkAllHikersSafety.bind(this));
+    }
+    
+    return this;
+  }
+  
+  /**
+   * Set map reference for visualization
+   * @param {Object} map - Map component
+   */
+  setMap(map) {
+    this.map = map;
+    const mapObject = map?.getMap();
+    
+    // Update map references in child components
+    this.trackManager.setMap(mapObject);
+    this.safetySettings.setMap(mapObject);
+  }
+  
+  /**
+   * Enable or disable track safety
+   * @param {boolean} enabled - Whether track safety is enabled
+   */
+  setEnabled(enabled) {
+    this.enabled = enabled;
+    
+    if (enabled) {
+      this.startMonitoring();
+    } else {
+      this.stopMonitoring();
+    }
+  }
+  
+  /**
+   * Set whether to highlight unsafe hikers on the map
+   * @param {boolean} highlight - Whether to highlight unsafe hikers
+   */
+  setHighlightUnsafeHikers(highlight) {
+    this.highlightUnsafeHikers = highlight;
+    
+    // Update hikers' visual state if needed
+    if (this.hikerManager) {
+      if (highlight) {
+        // Apply highlighting to all currently off-track hikers
+        this.offTrackHikers.forEach(hikerId => {
+          const marker = this.hikerManager.getHikerMarker(hikerId);
+          if (marker) {
+            this.highlightHikerMarker(marker);
+          }
+        });
+      } else {
+        // Remove highlighting from all hikers
+        this.offTrackHikers.forEach(hikerId => {
+          const marker = this.hikerManager.getHikerMarker(hikerId);
+          if (marker) {
+            this.resetHikerMarker(marker);
+          }
+        });
+      }
+    }
+  }
+  
+  /**
+   * Set the track deviation threshold for notifications
+   * @param {number} threshold - Threshold in meters
+   */
+  setTrackDeviationThreshold(threshold) {
+    this.trackDeviationThreshold = threshold;
+  }
+  
+  /**
+   * Enable or disable track deviation notifications
+   * @param {boolean} enabled - Whether track deviation notifications are enabled
+   */
+  setTrackDeviationNotifications(enabled) {
+    this.trackDeviationNotificationsEnabled = enabled;
+  }
+  
+  /**
+   * Apply settings from the settings component
+   * @param {Object} settings - Settings object
+   */
+  applySettings(settings) {
+    if (settings) {
+      // Apply safety settings
+      this.setEnabled(settings.safety?.enableTrackSafety ?? true);
+      this.setHighlightUnsafeHikers(settings.safety?.highlightUnsafeHikers ?? true);
+      
+      // Apply notification settings
+      this.setTrackDeviationNotifications(settings.notifications?.trackDeviationAlerts ?? true);
+      this.setTrackDeviationThreshold(settings.notifications?.trackDeviationThreshold ?? 50);
+    }
+  }
+  
+  /**
+   * Start monitoring hikers for track safety
+   */
+  startMonitoring() {
+    // Check all current hikers initially
+    this.checkAllHikersSafety();
+  }
+  
+  /**
+   * Stop monitoring hikers for track safety
+   */
+  stopMonitoring() {
+    // Remove all highlights if we're disabling monitoring
+    if (this.highlightUnsafeHikers && this.hikerManager) {
+      this.offTrackHikers.forEach(hikerId => {
+        const marker = this.hikerManager.getHikerMarker(hikerId);
+        if (marker) {
+          this.resetHikerMarker(marker);
+        }
+      });
+    }
+    
+    this.offTrackHikers.clear();
+  }
+  
+  /**
+   * Check all hikers' safety
+   */
+  checkAllHikersSafety() {
+    if (!this.enabled || !this.hikerManager) return;
+    
+    const hikers = this.hikerManager.getAllHikers();
+    
+    hikers.forEach(hiker => {
+      this.updateHikerSafety(hiker);
+    });
+  }
+  
+  /**
+   * Update a hiker's safety status
+   * @param {Object} hiker - Hiker object
+   */
+  updateHikerSafety(hiker) {
+    if (!this.enabled || !hiker || !hiker.id || !hiker.position) return;
+    
+    // Check if the hiker is within a safe track
+    const safetyInfo = this.trackManager.checkHikerSafety({
+      lng: hiker.position.longitude,
+      lat: hiker.position.latitude
+    });
+    
+    // Update hiker's safety status
+    hiker.safety = {
+      isOnTrack: safetyInfo.isOnTrack,
+      trackId: safetyInfo.trackId,
+      trackName: safetyInfo.trackName,
+      distanceFromTrack: safetyInfo.distanceFromTrack,
+      isSafe: safetyInfo.isSafe
+    };
+    
+    // Handle unsafe hikers
+    if (!safetyInfo.isOnTrack) {
+      this.handleUnsafeHiker(hiker, safetyInfo);
+    } else if (this.offTrackHikers.has(hiker.id)) {
+      // Hiker returned to track - reset their state
+      this.handleHikerReturnedToTrack(hiker);
+    }
+  }
+  
+  /**
+   * Handle a hiker that is off track
+   * @param {Object} hiker - Hiker object
+   * @param {Object} safetyInfo - Safety information
+   */
+  handleUnsafeHiker(hiker, safetyInfo) {
+    // Check if the hiker is already known to be off track
+    const isNewlyOffTrack = !this.offTrackHikers.has(hiker.id);
+    
+    // Add to set of off-track hikers
+    this.offTrackHikers.add(hiker.id);
+    
+    // Apply visual highlighting if enabled
+    if (this.highlightUnsafeHikers) {
+      const marker = this.hikerManager.getHikerMarker(hiker.id);
+      if (marker) {
+        this.highlightHikerMarker(marker);
+      }
+    }
+    
+    // Send notification if enabled and deviation exceeds threshold
+    if (isNewlyOffTrack && 
+        this.trackDeviationNotificationsEnabled && 
+        safetyInfo.distanceFromTrack > this.trackDeviationThreshold && 
+        this.notificationManager) {
+      
+      this.notificationManager.notify({
+        title: `${hiker.name} Off Track`,
+        message: `${hiker.name} has deviated ${Math.round(safetyInfo.distanceFromTrack)}m from the designated track`,
+        type: 'warning',
+        icon: 'exclamation-triangle',
+        autoClose: 7000,
+        data: {
+          hikerId: hiker.id,
+          distanceFromTrack: safetyInfo.distanceFromTrack,
+          trackId: safetyInfo.trackId
+        }
+      });
+    }
+  }
+  
+  /**
+   * Handle a hiker that has returned to track
+   * @param {Object} hiker - Hiker object
+   */
+  handleHikerReturnedToTrack(hiker) {
+    // Remove from set of off-track hikers
+    this.offTrackHikers.delete(hiker.id);
+    
+    // Reset visual styling
+    if (this.highlightUnsafeHikers) {
+      const marker = this.hikerManager.getHikerMarker(hiker.id);
+      if (marker) {
+        this.resetHikerMarker(marker);
+      }
+    }
+    
+    // Send a notification if notifications are enabled
+    if (this.trackDeviationNotificationsEnabled && this.notificationManager) {
+      this.notificationManager.notify({
+        title: `${hiker.name} Returned to Track`,
+        message: `${hiker.name} is now back on a designated safe track`,
+        type: 'success',
+        icon: 'check-circle',
+        autoClose: 5000,
+        data: {
+          hikerId: hiker.id
+        }
+      });
+    }
+  }
+  
+  /**
+   * Highlight a hiker marker to indicate it's off track
+   * @param {Object} marker - Leaflet marker object
+   */
+  highlightHikerMarker(marker) {
+    if (!marker) return;
+    
+    // Add a pulsing effect to the marker
+    const icon = marker.getIcon();
+    const element = marker.getElement();
+    
+    if (element) {
+      // Add off-track class for styling
+      element.classList.add('off-track-hiker');
+      
+      // If it's using a div icon, we can modify its inner HTML
+      if (element.querySelector('.hiker-marker')) {
+        const markerContent = element.querySelector('.hiker-marker');
+        if (markerContent) {
+          // Add a warning border
+          markerContent.style.border = '2px solid #ff8c00';
+          markerContent.style.boxShadow = '0 0 10px rgba(255, 140, 0, 0.7)';
+        }
+      }
+    }
+  }
+  
+  /**
+   * Reset a hiker marker to normal appearance
+   * @param {Object} marker - Leaflet marker object
+   */
+  resetHikerMarker(marker) {
+    if (!marker) return;
+    
+    const element = marker.getElement();
+    
+    if (element) {
+      // Remove off-track class
+      element.classList.remove('off-track-hiker');
+      
+      // Reset custom styling
+      if (element.querySelector('.hiker-marker')) {
+        const markerContent = element.querySelector('.hiker-marker');
+        if (markerContent) {
+          markerContent.style.border = '';
+          markerContent.style.boxShadow = '';
+        }
+      }
+    }
+  }
+  
+  /**
+   * Add necessary CSS styles for track safety
+   */
+  addStyles() {
+    if (document.getElementById('track-safety-module-styles')) return;
+    
+    const style = document.createElement('style');
+    style.id = 'track-safety-module-styles';
+    style.textContent = `
+      .off-track-hiker {
+        animation: pulse 1.5s infinite;
+        z-index: 1000 !important;
+      }
+      
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.1);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+    `;
+    
+    document.head.appendChild(style);
+  }
+  
+  /**
+   * Get the track safety manager
+   * @returns {TrackSafetyManager}
+   */
+  getTrackManager() {
+    return this.trackManager;
+  }
+  
+  /**
+   * Get the track safety settings component
+   * @returns {TrackSafetySettings}
+   */
+  getSettingsComponent() {
+    return this.safetySettings;
+  }
+}
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (TrackSafetyModule); 
+
+/***/ }),
+
+/***/ "./src/utils/TrackSafetyManager.js":
+/*!*****************************************!*\
+  !*** ./src/utils/TrackSafetyManager.js ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/**
+ * TrackSafetyManager - Utility for creating and managing hiking tracks with safety corridors
+ * Allows admins to define safe paths and monitor if hikers stay within acceptable distance
+ */
+class TrackSafetyManager {
+  /**
+   * Initialize the Track Safety Manager
+   * @param {Object} map - Reference to the map object for visualization
+   */
+  constructor(map = null) {
+    this.map = map;
+    this.tracks = [];
+    this.activeTrackId = null;
+    this.isCreatingTrack = false;
+    this.tempTrackPoints = [];
+    this.saveCallback = null;
+    
+    // Load saved tracks from localStorage if available
+    this.loadTracks();
+  }
+
+  /**
+   * Set the map reference for visualization
+   * @param {Object} map - The map object
+   */
+  setMap(map) {
+    this.map = map;
+    this.displayAllTracks();
+  }
+
+  /**
+   * Start creating a new track
+   * @param {Function} saveCallback - Called when track is saved
+   */
+  startTrackCreation(saveCallback = null) {
+    this.isCreatingTrack = true;
+    this.tempTrackPoints = [];
+    this.saveCallback = saveCallback;
+    
+    if (this.map) {
+      // Change cursor to indicate track creation mode
+      // Leaflet doesn't have getCanvas() like Mapbox GL
+      // Instead, we'll modify the container's style or add a class
+      const mapContainer = this.map.getContainer();
+      if (mapContainer) {
+        mapContainer.style.cursor = 'crosshair';
+      }
+      
+      // Add click listener for adding track points
+      this.map.on('click', this.handleMapClick.bind(this));
+    }
+    
+    return this;
+  }
+
+  /**
+   * Handle map click during track creation
+   * @param {Object} e - Click event
+   */
+  handleMapClick(e) {
+    if (!this.isCreatingTrack) return;
+    
+    // Get clicked coordinates - use Leaflet's e.latlng instead of Mapbox's e.lngLat
+    const point = [e.latlng.lng, e.latlng.lat];
+    this.tempTrackPoints.push(point);
+    
+    // Visualize current track being created
+    this.displayTempTrack();
+    
+    // Show a temporary marker at the clicked point for feedback
+    this.showTemporaryMarker(point);
+  }
+
+  /**
+   * Show a temporary marker at a clicked point
+   * @param {Array} point - [lng, lat] coordinates
+   */
+  showTemporaryMarker(point) {
+    if (!this.map) return;
+    
+    // Create a pulsing marker at the clicked point
+    const marker = L.circleMarker(
+      [point[1], point[0]], // Convert [lng, lat] to [lat, lng] for Leaflet
+      {
+        radius: 8,
+        fillColor: '#ffcc00',
+        color: 'white',
+        weight: 2,
+        opacity: 0.8,
+        fillOpacity: 0.8
+      }
+    ).addTo(this.map);
+    
+    // Create pulsing effect by changing radius
+    let size = 8;
+    let growing = false;
+    
+    const pulseInterval = setInterval(() => {
+      if (growing) {
+        size += 1;
+        if (size >= 15) growing = false;
+      } else {
+        size -= 1;
+        if (size <= 8) growing = true;
+      }
+      
+      marker.setRadius(size);
+    }, 50);
+    
+    // Remove the marker after 1 second
+    setTimeout(() => {
+      clearInterval(pulseInterval);
+      this.map.removeLayer(marker);
+    }, 1000);
+  }
+
+  /**
+   * Display the temporary track being created
+   */
+  displayTempTrack() {
+    if (!this.map || this.tempTrackPoints.length < 1) return;
+    
+    // Remove existing temp track layer if exists
+    if (this.tempTrackLayer) {
+      this.map.removeLayer(this.tempTrackLayer);
+    }
+    
+    // Create polyline for the temp track
+    this.tempTrackLayer = L.polyline(
+      this.tempTrackPoints.map(point => [point[1], point[0]]), // Convert [lng, lat] to [lat, lng] for Leaflet
+      {
+        color: '#00bfff',
+        weight: 4,
+        opacity: 0.8,
+        dashArray: '5, 10'
+      }
+    ).addTo(this.map);
+    
+    // Remove existing waypoint markers
+    if (this.tempMarkers) {
+      this.tempMarkers.forEach(marker => {
+        this.map.removeLayer(marker);
+      });
+    }
+    
+    // Create array for temporary markers
+    this.tempMarkers = [];
+    
+    // Add points for each waypoint
+    this.tempTrackPoints.forEach((point, index) => {
+      const marker = L.circleMarker(
+        [point[1], point[0]], // Convert [lng, lat] to [lat, lng] for Leaflet
+        {
+          radius: 6,
+          fillColor: '#ffffff',
+          color: '#00bfff',
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 1
+        }
+      ).addTo(this.map);
+      
+      this.tempMarkers.push(marker);
+    });
+  }
+
+  /**
+   * Save the current track being created
+   * @param {string} name - Name of the track
+   * @param {number} safetyWidth - Width of the safety corridor in meters
+   * @param {string} description - Description of the track
+   */
+  saveTrack(name, safetyWidth, description = '') {
+    if (this.tempTrackPoints.length < 2) {
+      console.warn('Cannot save track with less than 2 points');
+      return false;
+    }
+    
+    const trackId = `track_${Date.now()}`;
+    const newTrack = {
+      id: trackId,
+      name,
+      description,
+      safetyWidth,
+      points: this.tempTrackPoints,
+      createdAt: new Date().toISOString()
+    };
+    
+    this.tracks.push(newTrack);
+    this.saveTracks();
+    this.displayTrack(newTrack);
+    
+    // Reset track creation
+    this.isCreatingTrack = false;
+    this.tempTrackPoints = [];
+    
+    // Remove temp track visualization
+    if (this.map) {
+      // Reset cursor style
+      const mapContainer = this.map.getContainer();
+      if (mapContainer) {
+        mapContainer.style.cursor = '';
+      }
+      
+      this.map.off('click', this.handleMapClick.bind(this));
+      
+      // Remove temporary track layer
+      if (this.tempTrackLayer) {
+        this.map.removeLayer(this.tempTrackLayer);
+        this.tempTrackLayer = null;
+      }
+      
+      // Remove temporary markers
+      if (this.tempMarkers && this.tempMarkers.length > 0) {
+        this.tempMarkers.forEach(marker => {
+          this.map.removeLayer(marker);
+        });
+        this.tempMarkers = [];
+      }
+    }
+    
+    // Call save callback if provided
+    if (this.saveCallback) {
+      this.saveCallback(newTrack);
+      this.saveCallback = null;
+    }
+    
+    return trackId;
+  }
+
+  /**
+   * Cancel track creation
+   */
+  cancelTrackCreation() {
+    this.isCreatingTrack = false;
+    this.tempTrackPoints = [];
+    
+    // Remove temp track visualization
+    if (this.map) {
+      // Reset cursor style
+      const mapContainer = this.map.getContainer();
+      if (mapContainer) {
+        mapContainer.style.cursor = '';
+      }
+      
+      this.map.off('click', this.handleMapClick.bind(this));
+      
+      // Remove temporary track layer
+      if (this.tempTrackLayer) {
+        this.map.removeLayer(this.tempTrackLayer);
+        this.tempTrackLayer = null;
+      }
+      
+      // Remove temporary markers
+      if (this.tempMarkers && this.tempMarkers.length > 0) {
+        this.tempMarkers.forEach(marker => {
+          this.map.removeLayer(marker);
+        });
+        this.tempMarkers = [];
+      }
+    }
+    
+    this.saveCallback = null;
+  }
+
+  /**
+   * Display a single track on the map
+   * @param {Object} track - Track object to display
+   */
+  displayTrack(track) {
+    if (!this.map || !track || track.points.length < 2) return;
+    
+    // Clean up existing track elements if present
+    if (track.elements) {
+      if (track.elements.trackLine) this.map.removeLayer(track.elements.trackLine);
+      if (track.elements.corridor) this.map.removeLayer(track.elements.corridor);
+      if (track.elements.waypoints) {
+        track.elements.waypoints.forEach(marker => this.map.removeLayer(marker));
+      }
+    }
+    
+    // Initialize track elements object
+    track.elements = {
+      waypoints: []
+    };
+    
+    // Create the track polyline
+    track.elements.trackLine = L.polyline(
+      track.points.map(point => [point[1], point[0]]), // Convert [lng, lat] to [lat, lng] for Leaflet
+      {
+        color: '#3388ff',
+        weight: 4,
+        opacity: 0.8
+      }
+    ).addTo(this.map);
+    
+    // Create a safety corridor around the track
+    const corridorPoints = this.createCorridorPolygon(track.points, track.safetyWidth);
+    
+    track.elements.corridor = L.polygon(
+      corridorPoints.map(point => [point[1], point[0]]), // Convert [lng, lat] to [lat, lng] for Leaflet
+      {
+        color: '#3388ff',
+        weight: 1,
+        opacity: 0.4,
+        fillColor: '#3388ff',
+        fillOpacity: 0.2
+      }
+    ).addTo(this.map);
+    
+    // Add waypoint markers
+    track.points.forEach((point, index) => {
+      // Only add markers for first, last, and every 3rd point to avoid clutter
+      if (index === 0 || index === track.points.length - 1 || index % 3 === 0) {
+        const color = index === 0 ? '#00ff00' : 
+                     index === track.points.length - 1 ? '#ff0000' : '#3388ff';
+        
+        const marker = L.circleMarker(
+          [point[1], point[0]], // Convert [lng, lat] to [lat, lng] for Leaflet
+          {
+            radius: 5,
+            fillColor: color,
+            color: '#ffffff',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 1
+          }
+        ).addTo(this.map);
+        
+        track.elements.waypoints.push(marker);
+      }
+    });
+  }
+
+  /**
+   * Create a corridor polygon around a track line with the specified width
+   * @param {Array} points - Array of [lng, lat] coordinates defining the track
+   * @param {number} width - Width of the corridor in meters
+   * @returns {Array} Array of corridor points forming a polygon
+   */
+  createCorridorPolygon(points, widthMeters) {
+    if (points.length < 2) return [];
+    
+    // Convert width from meters to approximate degrees
+    // This is a simplification and not accurate for all latitudes
+    // For a production app, you would use a proper geospatial library
+    const lat = points[0][1]; // Use the latitude of the first point
+    // Approximate conversion at this latitude (rough estimate)
+    const metersPerDegreeLat = 111320; // approximate meters per degree latitude
+    const metersPerDegreeLng = 111320 * Math.cos(lat * Math.PI / 180);
+    
+    const widthLat = widthMeters / metersPerDegreeLat;
+    const widthLng = widthMeters / metersPerDegreeLng;
+    
+    // For each segment, calculate perpendicular offset points
+    const corridorPoints = [];
+    
+    // Generate left side of corridor (going forward)
+    for (let i = 0; i < points.length - 1; i++) {
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      
+      // Calculate perpendicular direction (90 degrees to track direction)
+      const dx = p2[0] - p1[0];
+      const dy = p2[1] - p1[1];
+      const length = Math.sqrt(dx * dx + dy * dy);
+      
+      // Normalize and rotate 90 degrees
+      const perpX = -dy / length;
+      const perpY = dx / length;
+      
+      // Add offset point to left side
+      corridorPoints.push([
+        p1[0] + perpX * widthLng,
+        p1[1] + perpY * widthLat
+      ]);
+    }
+    
+    // Add last point offset
+    const lastIdx = points.length - 1;
+    const secondLastIdx = points.length - 2;
+    const dx = points[lastIdx][0] - points[secondLastIdx][0];
+    const dy = points[lastIdx][1] - points[secondLastIdx][1];
+    const length = Math.sqrt(dx * dx + dy * dy);
+    const perpX = -dy / length;
+    const perpY = dx / length;
+    
+    corridorPoints.push([
+      points[lastIdx][0] + perpX * widthLng,
+      points[lastIdx][1] + perpY * widthLat
+    ]);
+    
+    // Generate right side of corridor (going backward)
+    for (let i = points.length - 1; i > 0; i--) {
+      const p1 = points[i];
+      const p2 = points[i - 1];
+      
+      const dx = p1[0] - p2[0];
+      const dy = p1[1] - p2[1];
+      const length = Math.sqrt(dx * dx + dy * dy);
+      
+      // Normalize and rotate -90 degrees
+      const perpX = dy / length;
+      const perpY = -dx / length;
+      
+      // Add offset point to right side
+      corridorPoints.push([
+        p1[0] + perpX * widthLng,
+        p1[1] + perpY * widthLat
+      ]);
+    }
+    
+    // Close the polygon
+    corridorPoints.push(corridorPoints[0]);
+    
+    return corridorPoints;
+  }
+
+  /**
+   * Display all tracks on the map
+   */
+  displayAllTracks() {
+    if (!this.map) return;
+    
+    // Clear existing track layers
+    this.clearTrackLayers();
+    
+    // Display each track
+    this.tracks.forEach(track => {
+      this.displayTrack(track);
+    });
+  }
+
+  /**
+   * Clear all track layers from the map
+   */
+  clearTrackLayers() {
+    if (!this.map) return;
+    
+    this.tracks.forEach(track => {
+      if (track.elements) {
+        if (track.elements.trackLine) this.map.removeLayer(track.elements.trackLine);
+        if (track.elements.corridor) this.map.removeLayer(track.elements.corridor);
+        if (track.elements.waypoints) {
+          track.elements.waypoints.forEach(marker => this.map.removeLayer(marker));
+        }
+      }
+    });
+  }
+
+  /**
+   * Edit an existing track
+   * @param {string} trackId - ID of the track to edit
+   * @param {Function} saveCallback - Called when track is saved
+   */
+  editTrack(trackId, saveCallback = null) {
+    const trackIndex = this.tracks.findIndex(t => t.id === trackId);
+    if (trackIndex === -1) return false;
+    
+    this.activeTrackId = trackId;
+    this.isCreatingTrack = true;
+    this.tempTrackPoints = [...this.tracks[trackIndex].points];
+    this.saveCallback = saveCallback;
+    
+    // Display current track points for editing
+    this.displayTempTrack();
+    
+    if (this.map) {
+      // Change cursor to indicate track creation mode
+      const mapContainer = this.map.getContainer();
+      if (mapContainer) {
+        mapContainer.style.cursor = 'crosshair';
+      }
+      
+      this.map.on('click', this.handleMapClick.bind(this));
+    }
+    
+    return true;
+  }
+
+  /**
+   * Delete a track
+   * @param {string} trackId - ID of the track to delete
+   */
+  deleteTrack(trackId) {
+    const trackIndex = this.tracks.findIndex(t => t.id === trackId);
+    if (trackIndex === -1) return false;
+    
+    const track = this.tracks[trackIndex];
+    
+    // Remove track visualization from map
+    if (this.map && track.elements) {
+      if (track.elements.trackLine) this.map.removeLayer(track.elements.trackLine);
+      if (track.elements.corridor) this.map.removeLayer(track.elements.corridor);
+      if (track.elements.waypoints) {
+        track.elements.waypoints.forEach(marker => this.map.removeLayer(marker));
+      }
+    }
+    
+    // Remove track from array
+    this.tracks.splice(trackIndex, 1);
+    
+    // Save updated tracks
+    this.saveTracks();
+    
+    return true;
+  }
+
+  /**
+   * Save tracks to localStorage
+   */
+  saveTracks() {
+    try {
+      localStorage.setItem('hikerTrackerTracks', JSON.stringify(this.tracks));
+    } catch (error) {
+      console.error('Error saving tracks to localStorage:', error);
+    }
+  }
+
+  /**
+   * Load tracks from localStorage
+   */
+  loadTracks() {
+    try {
+      const savedTracks = localStorage.getItem('hikerTrackerTracks');
+      if (savedTracks) {
+        this.tracks = JSON.parse(savedTracks);
+      }
+    } catch (error) {
+      console.error('Error loading tracks from localStorage:', error);
+      this.tracks = [];
+    }
+  }
+
+  /**
+   * Check if a hiker is within a safe corridor of any track
+   * @param {Object} hikerPosition - {lng, lat} object of hiker position
+   * @returns {Object} Result with safety information
+   */
+  checkHikerSafety(hikerPosition) {
+    if (!hikerPosition || this.tracks.length === 0) {
+      return {
+        isOnTrack: false,
+        trackId: null,
+        trackName: null,
+        distanceFromTrack: Infinity,
+        isSafe: false
+      };
+    }
+    
+    let closestTrackInfo = null;
+    let minDistance = Infinity;
+    
+    // Check distance to each track
+    this.tracks.forEach(track => {
+      const trackInfo = this.getDistanceToTrack(hikerPosition, track);
+      
+      if (trackInfo.distance < minDistance) {
+        minDistance = trackInfo.distance;
+        closestTrackInfo = {
+          trackId: track.id,
+          trackName: track.name,
+          distanceFromTrack: trackInfo.distance,
+          closestPointIndex: trackInfo.segmentIndex,
+          isOnTrack: trackInfo.distance <= track.safetyWidth,
+          isSafe: trackInfo.distance <= track.safetyWidth
+        };
+      }
+    });
+    
+    if (!closestTrackInfo) {
+      return {
+        isOnTrack: false,
+        trackId: null,
+        trackName: null,
+        distanceFromTrack: Infinity,
+        isSafe: false
+      };
+    }
+    
+    return closestTrackInfo;
+  }
+
+  /**
+   * Calculate minimum distance from a point to a track
+   * @param {Object} point - {lng, lat} object
+   * @param {Object} track - Track object
+   * @returns {Object} Distance information
+   */
+  getDistanceToTrack(point, track) {
+    if (!point || !track || !track.points || track.points.length < 2) {
+      return { distance: Infinity, segmentIndex: -1 };
+    }
+    
+    let minDistance = Infinity;
+    let closestSegmentIndex = -1;
+    
+    // Check each segment of the track
+    for (let i = 0; i < track.points.length - 1; i++) {
+      const segmentStart = track.points[i];
+      const segmentEnd = track.points[i + 1];
+      
+      const distance = this.distanceToSegment(
+        point.lng, point.lat,
+        segmentStart[0], segmentStart[1],
+        segmentEnd[0], segmentEnd[1]
+      );
+      
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestSegmentIndex = i;
+      }
+    }
+    
+    // Convert approximate degrees to meters (rough estimate)
+    // For a production app, use a proper geospatial library
+    const lat = point.lat;
+    const metersPerDegreeLat = 111320; // approximate meters per degree latitude
+    const metersPerDegreeLng = 111320 * Math.cos(lat * Math.PI / 180);
+    
+    // Average conversion factor for simplicity
+    const avgFactor = (metersPerDegreeLat + metersPerDegreeLng) / 2;
+    const distanceMeters = minDistance * avgFactor;
+    
+    return {
+      distance: distanceMeters,
+      segmentIndex: closestSegmentIndex
+    };
+  }
+
+  /**
+   * Calculate minimum distance from a point to a line segment
+   * @param {number} px - Point x coordinate
+   * @param {number} py - Point y coordinate
+   * @param {number} x1 - Line segment start x
+   * @param {number} y1 - Line segment start y
+   * @param {number} x2 - Line segment end x
+   * @param {number} y2 - Line segment end y
+   * @returns {number} Distance
+   */
+  distanceToSegment(px, py, x1, y1, x2, y2) {
+    const A = px - x1;
+    const B = py - y1;
+    const C = x2 - x1;
+    const D = y2 - y1;
+    
+    const dot = A * C + B * D;
+    const len_sq = C * C + D * D;
+    let param = -1;
+    
+    if (len_sq !== 0) {
+      param = dot / len_sq;
+    }
+    
+    let xx, yy;
+    
+    if (param < 0) {
+      xx = x1;
+      yy = y1;
+    } else if (param > 1) {
+      xx = x2;
+      yy = y2;
+    } else {
+      xx = x1 + param * C;
+      yy = y1 + param * D;
+    }
+    
+    const dx = px - xx;
+    const dy = py - yy;
+    
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  /**
+   * Get all tracks
+   * @returns {Array} All tracks
+   */
+  getAllTracks() {
+    return this.tracks;
+  }
+
+  /**
+   * Get a track by ID
+   * @param {string} trackId - ID of the track
+   * @returns {Object} Track object or null if not found
+   */
+  getTrackById(trackId) {
+    return this.tracks.find(t => t.id === trackId) || null;
+  }
+}
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (TrackSafetyManager); 
 
 /***/ }),
 
@@ -20970,9 +22668,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _components_Sidebar_Sidebar_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./components/Sidebar/Sidebar.js */ "./src/components/Sidebar/Sidebar.js");
 /* harmony import */ var _components_Modal_Modal_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./components/Modal/Modal.js */ "./src/components/Modal/Modal.js");
 /* harmony import */ var _components_Settings_Settings_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./components/Settings/Settings.js */ "./src/components/Settings/Settings.js");
+/* harmony import */ var _modules_TrackSafetyModule_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./modules/TrackSafetyModule.js */ "./src/modules/TrackSafetyModule.js");
 /**
  * Main Application - Coordinates all components
  */
+
 
 
 
@@ -20987,6 +22687,7 @@ class HikerTrackingApp {
     this.sidebar = new _components_Sidebar_Sidebar_js__WEBPACK_IMPORTED_MODULE_3__["default"]();
     this.modal = new _components_Modal_Modal_js__WEBPACK_IMPORTED_MODULE_4__["default"]();
     this.settings = new _components_Settings_Settings_js__WEBPACK_IMPORTED_MODULE_5__["default"]();
+    this.trackSafetyModule = null; // Will be initialized in init()
     this.simulationInterval = null;
     this.simulationSpeed = 3000; // 3 seconds instead of 1 second
     this.defaultCenter = [3.139, 101.6869];
@@ -21030,6 +22731,18 @@ class HikerTrackingApp {
       onZoomChange: (zoom) => {
         this.defaultZoom = zoom;
         this.map.centerMap(this.defaultCenter, zoom);
+      },
+      // Track safety settings change
+      onTrackSafetyChange: (enabled) => {
+        if (this.trackSafetyModule) {
+          this.trackSafetyModule.setEnabled(enabled);
+        }
+      },
+      // Settings changed callback
+      onSettingsChanged: (settings) => {
+        if (this.trackSafetyModule) {
+          this.trackSafetyModule.applySettings(settings);
+        }
       }
     });
     
@@ -21078,6 +22791,35 @@ class HikerTrackingApp {
         this.handleSosAction(hikerId, 'reset');
       }
     );
+    
+    // Initialize track safety module
+    this.trackSafetyModule = new _modules_TrackSafetyModule_js__WEBPACK_IMPORTED_MODULE_6__["default"](
+      this,
+      this.map,
+      {
+        getAllHikers: () => this.hikers,
+        getHikerMarker: (hikerId) => this.map.getHikerMarker(hikerId),
+        onHikersUpdated: (callback) => {
+          this.hikerUpdateCallbacks = this.hikerUpdateCallbacks || [];
+          this.hikerUpdateCallbacks.push(callback);
+        }
+      },
+      {
+        notify: (notification) => {
+          this.settings.showNotification(
+            notification.message,
+            notification.type,
+            notification.autoClose,
+            notification.icon
+          );
+        }
+      }
+    );
+    
+    // Initialize track safety module and apply settings
+    this.trackSafetyModule.init();
+    this.trackSafetyModule.addStyles();
+    this.trackSafetyModule.applySettings(initialSettings);
     
     // Set simulation speed from settings
     this.simulationSpeed = initialSettings.simulation.speed;
@@ -21371,8 +23113,25 @@ class HikerTrackingApp {
    * Render all UI components
    */
   renderAll() {
+    // Update the map
     this.map.updateMap(this.hikers, (hiker) => this.handleHikerClick(hiker));
+    
+    // Update the sidebar
     this.sidebar.updateSidebar(this.hikers);
+    
+    // Update safety status if module is initialized
+    if (this.trackSafetyModule) {
+      this.trackSafetyModule.checkAllHikersSafety();
+    }
+    
+    // Call any registered hikers update callbacks
+    if (this.hikerUpdateCallbacks && this.hikerUpdateCallbacks.length > 0) {
+      this.hikerUpdateCallbacks.forEach(callback => {
+        if (typeof callback === 'function') {
+          callback(this.hikers);
+        }
+      });
+    }
     
     // Update modal if it's open
     const activeHikerId = this.modal.activeHikerId;

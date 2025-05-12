@@ -229,6 +229,23 @@ class MapComponent {
       this.centerOnHiker(this.trackingHikerId);
     }
   }
+
+  /**
+   * Get the map instance
+   * @returns {Object} The Leaflet map instance
+   */
+  getMap() {
+    return this.map;
+  }
+
+  /**
+   * Get a hiker marker by ID
+   * @param {string|number} hikerId - The ID of the hiker
+   * @returns {Object|null} The Leaflet marker or null if not found
+   */
+  getHikerMarker(hikerId) {
+    return this.hikerMarkers?.[hikerId] || null;
+  }
 }
 
 export default MapComponent; 

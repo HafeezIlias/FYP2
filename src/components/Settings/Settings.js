@@ -29,10 +29,17 @@ class SettingsComponent {
       notifications: {
         sosAlerts: true,
         batteryAlerts: true,
-        batteryThreshold: 20
+        batteryThreshold: 20,
+        trackDeviationAlerts: true,
+        trackDeviationThreshold: 50
       },
       dataSource: {
         useFirebase: true
+      },
+      safety: {
+        enableTrackSafety: true,
+        defaultTrackWidth: 50,
+        highlightUnsafeHikers: true
       }
     };
     
@@ -202,6 +209,42 @@ class SettingsComponent {
         }
       });
       
+      // Track deviation notifications
+      document.getElementById('track-deviation-alerts')?.addEventListener('change', (e) => {
+        this.settings.notifications.trackDeviationAlerts = e.target.checked;
+        if (this.callbacks?.onTrackDeviationAlertsChange) {
+          this.callbacks.onTrackDeviationAlertsChange(e.target.checked);
+        }
+      });
+      
+      // Track deviation threshold change
+      document.getElementById('track-deviation-threshold')?.addEventListener('input', (e) => {
+        const thresholdValue = parseInt(e.target.value);
+        const thresholdElement = document.getElementById('track-deviation-threshold-value');
+        if (thresholdElement) {
+          thresholdElement.textContent = `${thresholdValue}m`;
+        }
+        this.settings.notifications.trackDeviationThreshold = thresholdValue;
+        if (this.callbacks?.onTrackDeviationThresholdChange) {
+          this.callbacks.onTrackDeviationThresholdChange(thresholdValue);
+        }
+      });
+      
+      // Safety settings
+      document.getElementById('enable-track-safety')?.addEventListener('change', (e) => {
+        this.settings.safety.enableTrackSafety = e.target.checked;
+        if (this.callbacks?.onTrackSafetyChange) {
+          this.callbacks.onTrackSafetyChange(e.target.checked);
+        }
+      });
+      
+      document.getElementById('highlight-unsafe-hikers')?.addEventListener('change', (e) => {
+        this.settings.safety.highlightUnsafeHikers = e.target.checked;
+        if (this.callbacks?.onHighlightUnsafeHikersChange) {
+          this.callbacks.onHighlightUnsafeHikersChange(e.target.checked);
+        }
+      });
+      
       // Firebase data source toggle
       document.getElementById('use-firebase')?.addEventListener('change', (e) => {
         if (!this.settings.dataSource) {
@@ -312,6 +355,32 @@ class SettingsComponent {
         if (batteryThresholdValue) {
           batteryThresholdValue.textContent = `${this.settings.notifications.batteryThreshold}%`;
         }
+      }
+      
+      // Track deviation notifications
+      const trackDeviationAlertsToggle = document.getElementById('track-deviation-alerts');
+      if (trackDeviationAlertsToggle) {
+        trackDeviationAlertsToggle.checked = this.settings.notifications.trackDeviationAlerts;
+      }
+      
+      const trackDeviationThresholdSlider = document.getElementById('track-deviation-threshold');
+      if (trackDeviationThresholdSlider) {
+        trackDeviationThresholdSlider.value = this.settings.notifications.trackDeviationThreshold;
+        const trackDeviationThresholdValue = document.getElementById('track-deviation-threshold-value');
+        if (trackDeviationThresholdValue) {
+          trackDeviationThresholdValue.textContent = `${this.settings.notifications.trackDeviationThreshold}m`;
+        }
+      }
+      
+      // Safety settings
+      const trackSafetyToggle = document.getElementById('enable-track-safety');
+      if (trackSafetyToggle) {
+        trackSafetyToggle.checked = this.settings.safety.enableTrackSafety;
+      }
+      
+      const highlightUnsafeHikersToggle = document.getElementById('highlight-unsafe-hikers');
+      if (highlightUnsafeHikersToggle) {
+        highlightUnsafeHikersToggle.checked = this.settings.safety.highlightUnsafeHikers;
       }
       
       // Data source settings

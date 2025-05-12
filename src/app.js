@@ -7,6 +7,7 @@ import MapComponent from './components/Map/Map.js';
 import SidebarComponent from './components/Sidebar/Sidebar.js';
 import ModalComponent from './components/Modal/Modal.js';
 import SettingsComponent from './components/Settings/Settings.js';
+import TrackSafetyModule from './modules/TrackSafetyModule.js';
 
 class HikerTrackingApp {
   constructor() {
@@ -15,6 +16,7 @@ class HikerTrackingApp {
     this.sidebar = new SidebarComponent();
     this.modal = new ModalComponent();
     this.settings = new SettingsComponent();
+    this.trackSafetyModule = null; // Will be initialized in init()
     this.simulationInterval = null;
     this.simulationSpeed = 3000; // 3 seconds instead of 1 second
     this.defaultCenter = [3.139, 101.6869];
@@ -58,6 +60,18 @@ class HikerTrackingApp {
       onZoomChange: (zoom) => {
         this.defaultZoom = zoom;
         this.map.centerMap(this.defaultCenter, zoom);
+      },
+      // Track safety settings change
+      onTrackSafetyChange: (enabled) => {
+        if (this.trackSafetyModule) {
+          this.trackSafetyModule.setEnabled(enabled);
+        }
+      },
+      // Settings changed callback
+      onSettingsChanged: (settings) => {
+        if (this.trackSafetyModule) {
+          this.trackSafetyModule.applySettings(settings);
+        }
       }
     });
     
@@ -106,6 +120,35 @@ class HikerTrackingApp {
         this.handleSosAction(hikerId, 'reset');
       }
     );
+    
+    // Initialize track safety module
+    this.trackSafetyModule = new TrackSafetyModule(
+      this,
+      this.map,
+      {
+        getAllHikers: () => this.hikers,
+        getHikerMarker: (hikerId) => this.map.getHikerMarker(hikerId),
+        onHikersUpdated: (callback) => {
+          this.hikerUpdateCallbacks = this.hikerUpdateCallbacks || [];
+          this.hikerUpdateCallbacks.push(callback);
+        }
+      },
+      {
+        notify: (notification) => {
+          this.settings.showNotification(
+            notification.message,
+            notification.type,
+            notification.autoClose,
+            notification.icon
+          );
+        }
+      }
+    );
+    
+    // Initialize track safety module and apply settings
+    this.trackSafetyModule.init();
+    this.trackSafetyModule.addStyles();
+    this.trackSafetyModule.applySettings(initialSettings);
     
     // Set simulation speed from settings
     this.simulationSpeed = initialSettings.simulation.speed;
@@ -399,8 +442,25 @@ class HikerTrackingApp {
    * Render all UI components
    */
   renderAll() {
+    // Update the map
     this.map.updateMap(this.hikers, (hiker) => this.handleHikerClick(hiker));
+    
+    // Update the sidebar
     this.sidebar.updateSidebar(this.hikers);
+    
+    // Update safety status if module is initialized
+    if (this.trackSafetyModule) {
+      this.trackSafetyModule.checkAllHikersSafety();
+    }
+    
+    // Call any registered hikers update callbacks
+    if (this.hikerUpdateCallbacks && this.hikerUpdateCallbacks.length > 0) {
+      this.hikerUpdateCallbacks.forEach(callback => {
+        if (typeof callback === 'function') {
+          callback(this.hikers);
+        }
+      });
+    }
     
     // Update modal if it's open
     const activeHikerId = this.modal.activeHikerId;

@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="src/components/Map/Map.css" />
   <link rel="stylesheet" href="src/components/Modal/Modal.css" />
   <link rel="stylesheet" href="src/components/Settings/Settings.css" />
+  <link rel="stylesheet" href="src/components/Settings/TrackSafety.css" />
 </head>
 <body>
   <div class="dashboard-container">
@@ -220,7 +221,51 @@
               <span id="battery-threshold-value">20%</span>
             </div>
           </div>
+          <div class="setting-item">
+            <div class="toggle-container">
+              <label for="track-deviation-alerts">Track Deviation Alerts:</label>
+              <label class="toggle">
+                <input type="checkbox" id="track-deviation-alerts" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <small class="setting-description">Alert when hikers deviate from designated tracks</small>
+          </div>
+          <div class="setting-item">
+            <label for="track-deviation-threshold">Deviation Threshold (m):</label>
+            <div class="range-container">
+              <input type="range" id="track-deviation-threshold" min="10" max="200" value="50" class="settings-range">
+              <span id="track-deviation-threshold-value">50m</span>
+            </div>
+          </div>
         </div>
+        
+        <div class="settings-section">
+          <h4>Safety Settings</h4>
+          <div class="setting-item">
+            <div class="toggle-container">
+              <label for="enable-track-safety">Enable Track Safety:</label>
+              <label class="toggle">
+                <input type="checkbox" id="enable-track-safety" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <small class="setting-description">Monitor hikers' adherence to defined safety tracks</small>
+          </div>
+          <div class="setting-item">
+            <div class="toggle-container">
+              <label for="highlight-unsafe-hikers">Highlight Off-Track Hikers:</label>
+              <label class="toggle">
+                <input type="checkbox" id="highlight-unsafe-hikers" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <small class="setting-description">Visually highlight hikers that have deviated from safety tracks</small>
+          </div>
+        </div>
+        
+        <!-- Track Safety Settings will be added here dynamically -->
+        <div id="track-safety-settings-container"></div>
       </div>
       <div class="modal-actions">
         <button class="action-btn primary-btn" id="save-settings">Save Settings</button>
