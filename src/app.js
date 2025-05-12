@@ -336,6 +336,9 @@ class HikerTrackingApp {
     
     console.log('Opening modal for hiker:', hiker);
     
+    // Update the marker position to the latest coordinates
+    this.updateMarkerPosition(hiker);
+    
     // Open the modal with the hiker's data
     this.modal.openModal(hiker);
     
@@ -421,11 +424,11 @@ class HikerTrackingApp {
   updateMarkerStyle(hiker) {
     const marker = this.map.hikerMarkers[hiker.id];
     if (marker) {
-      // Replace the marker with an updated one
-      const position = marker.getLatLng();
+      // Remove the old marker
       this.map.markerLayer.removeLayer(marker);
       
-      const newMarker = L.marker(position, {
+      // Create a new marker with updated style and the latest coordinates
+      const newMarker = L.marker([hiker.lat, hiker.lon], {
         icon: this.map.createCustomMarkerIcon(hiker),
         zIndexOffset: hiker.sos ? 1000 : 0
       }).addTo(this.map.markerLayer);
@@ -439,10 +442,27 @@ class HikerTrackingApp {
   }
 
   /**
+   * Update marker position for a hiker
+   * @param {Object} hiker - The hiker to update
+   */
+  updateMarkerPosition(hiker) {
+    const marker = this.map.hikerMarkers[hiker.id];
+    if (marker) {
+      // Update marker position to latest coordinates
+      marker.setLatLng([hiker.lat, hiker.lon]);
+    }
+  }
+
+  /**
    * Render all UI components
    */
   renderAll() {
-    // Update the map
+    // First update the positions of existing markers without recreating them
+    this.hikers.forEach(hiker => {
+      this.updateMarkerPosition(hiker);
+    });
+    
+    // Update the map - this recreates all markers if needed
     this.map.updateMap(this.hikers, (hiker) => this.handleHikerClick(hiker));
     
     // Update the sidebar

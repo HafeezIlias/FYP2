@@ -16,6 +16,7 @@ class MapComponent {
     this.containerId = containerId;
     this.initialCenter = initialCenter;
     this.initialZoom = initialZoom;
+    this.preserveCurrentView = true; // Add flag to preserve current view
   }
 
   /**
@@ -47,13 +48,27 @@ class MapComponent {
     document.getElementById('center-map')?.addEventListener('click', () => {
       this.centerMap();
       this.trackingHikerId = null;
+      // View preservation is handled in centerMap method
     });
     
     // Toggle all hikers button can be implemented here
     document.getElementById('toggle-all-hikers')?.addEventListener('click', () => {
-      // Implement toggle functionality
-      // For example, fit bounds to show all hikers
       this.fitToAllHikers();
+      // View preservation is handled in fitToAllHikers method
+    });
+    
+    // Add event listener to detect user-initiated map movements
+    this.map.on('moveend', (e) => {
+      // If this move was triggered by user interaction and not programmatically
+      if (e.hard !== true) {
+        // User has manually moved the map, so we should preserve their view
+        this.preserveCurrentView = true;
+        // Cancel any active tracking when user manually moves the map
+        if (this.trackingHikerId !== null && e.target._zoom !== 15) {
+          console.log('User moved map, canceling tracking');
+          this.trackingHikerId = null;
+        }
+      }
     });
   }
 
@@ -119,8 +134,10 @@ class MapComponent {
         }
         
         console.log(`Centering map on hiker ${hikerId} at ${lat},${lon}`);
+        this.preserveCurrentView = false; // Disable view preservation when explicitly centering
         this.map.setView([lat, lon], 15);
         this.trackingHikerId = hikerId;
+        this.preserveCurrentView = true; // Re-enable view preservation after centering
       } catch (error) {
         console.error(`Error centering on hiker ${hikerId}:`, error);
       }
@@ -135,7 +152,10 @@ class MapComponent {
   centerMap(center, zoom) {
     const targetCenter = center || this.initialCenter;
     const targetZoom = zoom || this.initialZoom;
+    this.preserveCurrentView = false; // Disable view preservation for explicit center
     this.map.setView(targetCenter, targetZoom);
+    this.trackingHikerId = null; // Stop tracking any hiker
+    this.preserveCurrentView = true; // Re-enable view preservation
   }
 
   /**
@@ -162,7 +182,9 @@ class MapComponent {
     try {
       const bounds = L.latLngBounds(validHikers.map(h => [parseFloat(h.lat), parseFloat(h.lon)]));
       console.log('Fitting map to bounds:', bounds);
+      this.preserveCurrentView = false; // Disable view preservation for fitting bounds
       this.map.fitBounds(bounds, { padding: [50, 50] });
+      this.preserveCurrentView = true; // Re-enable view preservation
     } catch (error) {
       console.error('Error fitting bounds to hikers:', error);
     }
@@ -179,9 +201,14 @@ class MapComponent {
       return;
     }
     
+    // Store current view before updating
+    const currentCenter = this.map.getCenter();
+    const currentZoom = this.map.getZoom();
+    
     this.hikers = hikers;
-    this.markerLayer.clearLayers();
-    this.hikerMarkers = {};
+    
+    // Keep track of current hiker IDs
+    const currentHikerIds = new Set();
     
     console.log('Updating map with hikers:', hikers);
     
@@ -196,37 +223,63 @@ class MapComponent {
         return;
       }
       
-      console.log(`Creating marker for ${hiker.id} at ${lat},${lon}`);
+      currentHikerIds.add(hiker.id);
       
-      try {
-        // Create or update marker with enhanced label
-        const marker = L.marker([lat, lon], {
-          icon: this.createCustomMarkerIcon(hiker),
-          zIndexOffset: hiker.sos ? 1000 : 0 // SOS markers on top
-        }).addTo(this.markerLayer);
+      // Check if marker already exists
+      const existingMarker = this.hikerMarkers[hiker.id];
+      
+      if (existingMarker) {
+        // Update existing marker position and icon
+        existingMarker.setLatLng([lat, lon]);
+        existingMarker.setIcon(this.createCustomMarkerIcon(hiker));
+        existingMarker.setZIndexOffset(hiker.sos ? 1000 : 0);
+      } else {
+        // Create new marker
+        console.log(`Creating marker for ${hiker.id} at ${lat},${lon}`);
         
-        if (onMarkerClick) {
-          marker.on('click', () => onMarkerClick(hiker));
+        try {
+          const marker = L.marker([lat, lon], {
+            icon: this.createCustomMarkerIcon(hiker),
+            zIndexOffset: hiker.sos ? 1000 : 0 // SOS markers on top
+          }).addTo(this.markerLayer);
+          
+          if (onMarkerClick) {
+            marker.on('click', () => onMarkerClick(hiker));
+          }
+          
+          this.hikerMarkers[hiker.id] = marker;
+        } catch (error) {
+          console.error(`Error creating marker for hiker ${hiker.id}:`, error);
         }
-        
-        this.hikerMarkers[hiker.id] = marker;
-      } catch (error) {
-        console.error(`Error creating marker for hiker ${hiker.id}:`, error);
       }
     });
     
-    // If we have at least one hiker, fit bounds if no tracking
-    if (hikers.length > 0 && this.trackingHikerId === null) {
-      try {
-        this.fitToAllHikers();
-      } catch (error) {
-        console.error('Error fitting bounds to hikers:', error);
+    // Remove markers for hikers that no longer exist
+    Object.keys(this.hikerMarkers).forEach(hikerId => {
+      if (!currentHikerIds.has(Number(hikerId)) && !currentHikerIds.has(hikerId)) {
+        this.markerLayer.removeLayer(this.hikerMarkers[hikerId]);
+        delete this.hikerMarkers[hikerId];
       }
-    }
+    });
     
-    // Follow tracked hiker if needed
-    if (this.trackingHikerId !== null) {
-      this.centerOnHiker(this.trackingHikerId);
+    // Only adjust view if we're not preserving the current view
+    if (!this.preserveCurrentView) {
+      // If we have at least one hiker, fit bounds if no tracking
+      if (hikers.length > 0 && this.trackingHikerId === null) {
+        try {
+          this.fitToAllHikers();
+        } catch (error) {
+          console.error('Error fitting bounds to hikers:', error);
+        }
+      }
+      
+      // Follow tracked hiker if needed
+      if (this.trackingHikerId !== null) {
+        this.centerOnHiker(this.trackingHikerId);
+      }
+    } else if (currentCenter && currentZoom) {
+      // Restore previous view if preserving
+      this.map.setView(currentCenter, currentZoom, { animate: false });
     }
   }
 
