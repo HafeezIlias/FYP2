@@ -42,23 +42,22 @@ function parseTimestamp(timestamp) {
   
   // If it's a string, try to parse it
   if (typeof timestamp === 'string') {
-    // Handle time format like "03:39:05" (UTC time)
+    // Handle time format like "03:39:05" (local time)
     if (timestamp.includes(':')) {
       try {
-        // Get current date in UTC
+        // Get current date
         const now = new Date();
-        const utcYear = now.getUTCFullYear();
-        const utcMonth = now.getUTCMonth();
-        const utcDay = now.getUTCDate();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+        const day = now.getDate();
         
         // Parse hours, minutes, seconds
         const [hours, minutes, seconds] = timestamp.split(':').map(Number);
         
-        // Create UTC date
-        const date = new Date(Date.UTC(utcYear, utcMonth, utcDay, hours, minutes, seconds));
+        // Create date in local time
+        const date = new Date(year, month, day, hours, minutes, seconds);
         
-        console.log(`Parsed UTC time string "${timestamp}" to:`, {
-          utcTime: date.toUTCString(),
+        console.log(`Parsed time string "${timestamp}" to:`, {
           localTime: date.toString(),
           milliseconds: date.getTime()
         });
