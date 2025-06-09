@@ -1,22 +1,29 @@
 /**
  * Main Application - Coordinates all components
  */
-import { createSampleHikers } from './utils/helpers.js';
+import { createSampleHikers, createSampleTowers } from './utils/helpers.js';
 import { fetchHikersFromFirebase, listenForHikersUpdates, updateHikerSosStatus, updateNodeName } from './utils/firebase.js';
 import MapComponent from './components/Map/Map.js';
 import SidebarComponent from './components/Sidebar/Sidebar.js';
 import ModalComponent from './components/Modal/Modal.js';
+import TowerModalComponent from './components/Modal/TowerModal.js';
 import SettingsComponent from './components/Settings/Settings.js';
 import TrackSafetyModule from './modules/TrackSafetyModule.js';
+import TowerManager from './components/Tower/TowerManager.js';
+import TowerControls from './components/Tower/TowerControls.js';
 
 class HikerTrackingApp {
   constructor() {
     this.hikers = [];
+    this.towers = [];
     this.map = new MapComponent();
     this.sidebar = new SidebarComponent();
     this.modal = new ModalComponent();
+    this.towerModal = new TowerModalComponent();
     this.settings = new SettingsComponent();
     this.trackSafetyModule = null; // Will be initialized in init()
+    this.towerManager = new TowerManager();
+    this.towerControls = null; // Will be initialized in init()
     this.simulationInterval = null;
     this.simulationSpeed = 3000; // 3 seconds instead of 1 second
     this.defaultCenter = [3.139, 101.6869];
@@ -92,9 +99,20 @@ class HikerTrackingApp {
     this.changeMapStyle(initialSettings.map.style);
     
     // Initialize sidebar component
-    this.sidebar.init((hiker) => {
-      this.handleHikerClick(hiker);
-    });
+    this.sidebar.init(
+      // Hiker click callback
+      (hiker) => {
+        this.handleHikerClick(hiker);
+      },
+      // Tower click callback
+      (tower) => {
+        this.handleTowerClick(tower);
+      },
+      // Settings click callback
+      () => {
+        this.settings.openModal();
+      }
+    );
     
     // Initialize modal component
     this.modal.init(
@@ -120,6 +138,28 @@ class HikerTrackingApp {
         this.handleSosAction(hikerId, 'reset');
       }
     );
+
+    // Initialize tower modal component
+    this.towerModal.init(
+      // Connect hikers callback
+      (towerId) => {
+        this.handleTowerConnectHikers(towerId);
+      },
+      // View coverage callback
+      (towerId) => {
+        this.handleTowerViewCoverage(towerId);
+      }
+    );
+
+    // Initialize tower controls for adding towers
+    this.towerControls = new TowerControls(this.towerManager, this.map);
+    this.towerControls.init();
+
+    // Set up tower manager update callback
+    this.towerManager.onUpdate((towers) => {
+      this.towers = towers;
+      this.renderAll();
+    });
     
     // Initialize track safety module
     this.trackSafetyModule = new TrackSafetyModule(
@@ -175,6 +215,8 @@ class HikerTrackingApp {
       // Use simulated data
       const settings = this.settings.getSettings();
       this.hikers = await createSampleHikers(settings.simulation.hikersCount || 10);
+      const sampleTowers = await createSampleTowers(3); // Create 3 sample towers/basecamps
+      this.towerManager.loadTowers(sampleTowers);
       
       // Start simulation
       this.startSimulation();
@@ -428,6 +470,63 @@ class HikerTrackingApp {
   }
 
   /**
+   * Handle tower connect hikers action
+   * @param {string} towerId - The ID of the tower
+   */
+  handleTowerConnectHikers(towerId) {
+    console.log(`Connecting hikers to tower ${towerId}`);
+    
+    // Find hikers within the tower's range and connect them
+    // This is a placeholder for actual connection logic
+    this.settings.showNotification(
+      `Connected nearby hikers to tower ${towerId}`,
+      3000
+    );
+    
+    // Could implement actual logic to:
+    // 1. Calculate hikers within tower range
+    // 2. Update their connection status
+    // 3. Show visual indicators on the map
+  }
+
+  /**
+   * Handle tower view coverage action
+   * @param {string} towerId - The ID of the tower
+   */
+  handleTowerViewCoverage(towerId) {
+    console.log(`Viewing coverage for tower ${towerId}`);
+    
+    // This would show the coverage area on the map
+    // Placeholder for actual coverage visualization
+    this.settings.showNotification(
+      `Showing coverage area for tower ${towerId}`,
+      3000
+    );
+    
+    // Could implement:
+    // 1. Draw coverage circle on map
+    // 2. Highlight hikers within/outside coverage
+    // 3. Show coverage statistics
+  }
+
+  /**
+   * Handle tower node click (similar to hiker click)
+   * @param {Object} tower - The tower object
+   */
+  handleTowerClick(tower) {
+    console.log('Tower clicked:', tower);
+    
+    // Ensure tower has required properties
+    if (!tower || !tower.id) {
+      console.error('Invalid tower object:', tower);
+      return;
+    }
+    
+    // Open the tower modal with tower data
+    this.towerModal.openModal(tower);
+  }
+
+  /**
    * Update marker style for a hiker (e.g., for handled SOS)
    * @param {Object} hiker - The hiker to update
    */
@@ -475,10 +574,16 @@ class HikerTrackingApp {
     });
     
     // Update the map - this recreates all markers if needed
-    this.map.updateMap(this.hikers, (hiker) => this.handleHikerClick(hiker));
+    this.map.updateMap(
+      this.hikers, 
+      (hiker) => this.handleHikerClick(hiker),
+      this.towers,
+      (tower) => this.handleTowerClick(tower)
+    );
     
     // Update the sidebar
     this.sidebar.updateSidebar(this.hikers);
+    this.sidebar.updateTowerList(this.towers);
     
     // Update safety status if module is initialized
     if (this.trackSafetyModule) {

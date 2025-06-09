@@ -11,26 +11,42 @@ class SidebarComponent {
   constructor(containerId = 'sidebar') {
     this.containerId = containerId;
     this.hikerListId = 'hiker-list';
+    this.towerListId = 'tower-list';
     this.totalHikersId = 'total-hikers';
     this.sosCountId = 'sos-count';
+    this.totalTowersId = 'total-towers';
+    this.activeTowersId = 'active-towers';
     this.searchId = 'hiker-search';
     this.settingsButtonId = 'settings-button';
     this.hikerCards = new Map();
+    this.towerCards = new Map();
     this.onHikerClick = null;
+    this.onTowerClick = null;
     this.onSettingsClick = null;
+    this.currentFilter = 'hikers';
   }
 
   /**
    * Initialize the sidebar
    * @param {Function} onHikerClick - Callback for hiker card click events
+   * @param {Function} onTowerClick - Callback for tower card click events
    */
-  init(onHikerClick, onSettingsClick) {
+  init(onHikerClick, onTowerClick, onSettingsClick) {
     this.onHikerClick = onHikerClick;
+    this.onTowerClick = onTowerClick;
     this.onSettingsClick = onSettingsClick;
     
     // Set up search functionality
     document.getElementById(this.searchId)?.addEventListener('input', (e) => {
-      this.filterHikers(e.target.value);
+      this.filterItems(e.target.value);
+    });
+    
+    // Set up filter tabs
+    document.querySelectorAll('.filter-tab').forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        const filter = e.currentTarget.dataset.filter;
+        this.switchFilter(filter);
+      });
     });
     
     const settingsButton = document.getElementById(this.settingsButtonId);
@@ -46,16 +62,61 @@ class SidebarComponent {
   }
 
   /**
-   * Filter hikers in the sidebar based on search term
+   * Switch between hikers and towers filter
+   * @param {string} filter - 'hikers' or 'towers'
+   */
+  switchFilter(filter) {
+    this.currentFilter = filter;
+    
+    // Update tab appearance
+    document.querySelectorAll('.filter-tab').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.filter === filter);
+    });
+    
+    // Show/hide appropriate lists and stats
+    const hikerList = document.getElementById(this.hikerListId);
+    const towerList = document.getElementById(this.towerListId);
+    const hikerStats = document.querySelectorAll('.hikers-stat');
+    const towerStats = document.querySelectorAll('.towers-stat');
+    
+    if (filter === 'hikers') {
+      hikerList.style.display = 'block';
+      towerList.style.display = 'none';
+      hikerStats.forEach(stat => stat.style.display = 'flex');
+      towerStats.forEach(stat => stat.style.display = 'none');
+    } else {
+      hikerList.style.display = 'none';
+      towerList.style.display = 'block';
+      hikerStats.forEach(stat => stat.style.display = 'none');
+      towerStats.forEach(stat => stat.style.display = 'flex');
+    }
+    
+    // Clear search
+    const searchInput = document.getElementById(this.searchId);
+    if (searchInput) {
+      searchInput.value = '';
+      searchInput.placeholder = filter === 'hikers' ? 'Search hikers...' : 'Search towers...';
+    }
+  }
+
+  /**
+   * Filter items in the sidebar based on search term
    * @param {string} searchTerm - The search term to filter by
    */
-  filterHikers(searchTerm) {
+  filterItems(searchTerm) {
     const term = searchTerm.toLowerCase();
     
-    document.querySelectorAll('.hiker-card').forEach(card => {
-      const hikerName = card.querySelector('.hiker-name').textContent.toLowerCase();
-      card.style.display = hikerName.includes(term) ? 'block' : 'none';
-    });
+    if (this.currentFilter === 'hikers') {
+      document.querySelectorAll('.hiker-card').forEach(card => {
+        const hikerName = card.querySelector('.hiker-name').textContent.toLowerCase();
+        card.style.display = hikerName.includes(term) ? 'block' : 'none';
+      });
+    } else {
+      document.querySelectorAll('.tower-card').forEach(card => {
+        const towerName = card.querySelector('.tower-name').textContent.toLowerCase();
+        card.style.display = towerName.includes(term) ? 'block' : 'none';
+      });
+    }
   }
 
   /**
@@ -108,6 +169,53 @@ class SidebarComponent {
   }
 
   /**
+   * Create a tower card element
+   * @param {Object} tower - The tower object
+   * @returns {HTMLElement} The tower card element
+   */
+  createTowerCard(tower) {
+    const card = document.createElement('div');
+    card.className = 'tower-card';
+    card.setAttribute('data-tower-id', tower.id);
+    
+    const typeIcon = tower.type === 'Tower' ? 'fa-broadcast-tower' : 'fa-campground';
+    const typeClass = tower.type.toLowerCase();
+    
+    card.innerHTML = `
+      <div class="tower-info">
+        <div class="tower-icon ${typeClass}">
+          <i class="fas ${typeIcon}"></i>
+        </div>
+        <div class="tower-name-type">
+          <div class="tower-name">${tower.name}</div>
+          <div class="tower-type">
+            <i class="fas ${typeIcon}"></i>
+            ${tower.type}
+          </div>
+        </div>
+      </div>
+      <div class="tower-details">
+        <div class="tower-detail-item">
+          <i class="fas fa-signal"></i>
+          ${Math.round(tower.signalStrength)}%
+        </div>
+        <div class="tower-status ${tower.status.toLowerCase()}">
+          ${tower.status}
+        </div>
+      </div>
+    `;
+    
+    if (this.onTowerClick) {
+      card.addEventListener('click', () => {
+        console.log('Tower card clicked:', tower);
+        this.onTowerClick(tower);
+      });
+    }
+    
+    return card;
+  }
+
+  /**
    * Update the sidebar with current hiker data
    * @param {Array} hikers - Array of hiker objects
    */
@@ -131,6 +239,32 @@ class SidebarComponent {
     // Update stats
     document.getElementById(this.totalHikersId).textContent = hikers.length;
     document.getElementById(this.sosCountId).textContent = sosCount;
+  }
+
+  /**
+   * Update the sidebar with current tower data
+   * @param {Array} towers - Array of tower objects
+   */
+  updateTowerList(towers) {
+    const towerList = document.getElementById(this.towerListId);
+    if (!towerList) return;
+    
+    // Clear the current list
+    towerList.innerHTML = '';
+    
+    // Count active towers
+    let activeCount = 0;
+    towers.forEach(tower => {
+      if (tower.status === 'Active') activeCount++;
+      
+      // Create and append the tower card
+      const card = this.createTowerCard(tower);
+      towerList.appendChild(card);
+    });
+    
+    // Update stats
+    document.getElementById(this.totalTowersId).textContent = towers.length;
+    document.getElementById(this.activeTowersId).textContent = activeCount;
   }
 
   renderHikerCard(hiker) {

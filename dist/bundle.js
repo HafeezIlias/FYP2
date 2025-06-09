@@ -18674,6 +18674,7 @@ class MapComponent {
     this.map = null;
     this.markerLayer = null;
     this.hikerMarkers = {};
+    this.towerMarkers = {};
     this.trackingHikerId = null;
     this.containerId = containerId;
     this.initialCenter = initialCenter;
@@ -18770,6 +18771,46 @@ class MapComponent {
   }
 
   /**
+   * Create a custom marker for a tower/basecamp
+   * @param {Object} tower - The tower object
+   * @returns {Object} Leaflet divIcon
+   */
+  createTowerMarkerIcon(tower) {
+    const typeClass = tower.type.toLowerCase();
+    const statusClass = tower.status.toLowerCase();
+    
+    // Choose icon based on type
+    const iconClass = tower.type === 'Tower' ? 'fa-broadcast-tower' : 'fa-campground';
+    
+    // Status indicator
+    let statusIndicator = '';
+    if (tower.status === 'Offline') {
+      statusIndicator = '<i class="fas fa-times-circle tower-status-icon offline"></i>';
+    } else if (tower.status === 'Maintenance') {
+      statusIndicator = '<i class="fas fa-wrench tower-status-icon maintenance"></i>';
+    } else {
+      statusIndicator = '<i class="fas fa-check-circle tower-status-icon active"></i>';
+    }
+    
+    const markerHtml = `
+      <div class="tower-marker-label ${typeClass} ${statusClass}">
+        ${tower.name}
+        ${statusIndicator}
+      </div>
+      <div class="tower-marker ${typeClass} ${statusClass}">
+        <i class="fas ${iconClass}"></i>
+      </div>
+    `;
+    
+    return L.divIcon({
+      html: markerHtml,
+      className: 'tower-marker-container',
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
+    });
+  }
+
+  /**
    * Center the map on a specific hiker
    * @param {string|number} hikerId - The ID of the hiker to center on
    */
@@ -18853,11 +18894,13 @@ class MapComponent {
   }
 
   /**
-   * Update the map with current hiker data
+   * Update the map with current hiker and tower data
    * @param {Array} hikers - Array of hiker objects
-   * @param {Function} onMarkerClick - Callback for marker click events
+   * @param {Function} onHikerClick - Callback for hiker marker click events
+   * @param {Array} towers - Array of tower objects
+   * @param {Function} onTowerClick - Callback for tower marker click events
    */
-  updateMap(hikers, onMarkerClick) {
+  updateMap(hikers, onHikerClick, towers = [], onTowerClick = null) {
     if (!this.map || !this.markerLayer) {
       console.error('Map not initialized');
       return;
@@ -18905,8 +18948,8 @@ class MapComponent {
             zIndexOffset: hiker.sos ? 1000 : 0 // SOS markers on top
           }).addTo(this.markerLayer);
           
-          if (onMarkerClick) {
-            marker.on('click', () => onMarkerClick(hiker));
+          if (onHikerClick) {
+            marker.on('click', () => onHikerClick(hiker));
           }
           
           this.hikerMarkers[hiker.id] = marker;
@@ -18921,6 +18964,58 @@ class MapComponent {
       if (!currentHikerIds.has(Number(hikerId)) && !currentHikerIds.has(hikerId)) {
         this.markerLayer.removeLayer(this.hikerMarkers[hikerId]);
         delete this.hikerMarkers[hikerId];
+      }
+    });
+
+    // Handle tower markers
+    const currentTowerIds = new Set();
+    
+    towers.forEach(tower => {
+      // Ensure lat and lon are valid numbers
+      const lat = parseFloat(tower.lat);
+      const lon = parseFloat(tower.lon);
+      
+      // Skip invalid coordinates
+      if (isNaN(lat) || isNaN(lon)) {
+        console.warn(`Invalid coordinates for tower ${tower.id}:`, tower.lat, tower.lon);
+        return;
+      }
+      
+      currentTowerIds.add(tower.id);
+      
+      // Check if marker already exists
+      const existingMarker = this.towerMarkers[tower.id];
+      
+      if (existingMarker) {
+        // Update existing marker position and icon
+        existingMarker.setLatLng([lat, lon]);
+        existingMarker.setIcon(this.createTowerMarkerIcon(tower));
+      } else {
+        // Create new marker
+        console.log(`Creating tower marker for ${tower.id} at ${lat},${lon}`);
+        
+        try {
+          const marker = L.marker([lat, lon], {
+            icon: this.createTowerMarkerIcon(tower),
+            zIndexOffset: 500 // Towers above hikers but below SOS
+          }).addTo(this.markerLayer);
+          
+          if (onTowerClick) {
+            marker.on('click', () => onTowerClick(tower));
+          }
+          
+          this.towerMarkers[tower.id] = marker;
+        } catch (error) {
+          console.error(`Error creating marker for tower ${tower.id}:`, error);
+        }
+      }
+    });
+    
+    // Remove markers for towers that no longer exist
+    Object.keys(this.towerMarkers).forEach(towerId => {
+      if (!currentTowerIds.has(towerId)) {
+        this.markerLayer.removeLayer(this.towerMarkers[towerId]);
+        delete this.towerMarkers[towerId];
       }
     });
     
@@ -19374,6 +19469,306 @@ class ModalComponent {
 }
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (ModalComponent); 
+
+/***/ }),
+
+/***/ "./src/components/Modal/TowerModal.js":
+/*!********************************************!*\
+  !*** ./src/components/Modal/TowerModal.js ***!
+  \********************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/helpers.js */ "./src/utils/helpers.js");
+/* harmony import */ var _utils_firebase_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/firebase.js */ "./src/utils/firebase.js");
+/**
+ * Tower Modal Component - Handles the tower/basecamp detail modal
+ */
+
+
+
+class TowerModalComponent {
+  /**
+   * Initialize the Tower Modal component
+   * @param {string} modalId - The ID of the modal element
+   */
+  constructor(modalId = 'tower-modal') {
+    this.modalId = modalId;
+    this.nameId = 'tower-modal-name';
+    this.typeId = 'tower-modal-type';
+    this.statusId = 'tower-modal-status';
+    this.signalStrengthId = 'tower-modal-signal';
+    this.signalBarId = 'tower-modal-signal-bar';
+    this.lastUpdateId = 'tower-modal-lastupdate';
+    this.coordsId = 'tower-modal-coords';
+    this.coverageId = 'tower-modal-coverage';
+    this.connectHikersBtnId = 'connect-hikers';
+    this.viewCoverageBtnId = 'view-coverage';
+    this.closeBtnClass = 'close-btn';
+    
+    this.activeTowerId = null;
+    this.activeTower = null;
+    this.originalNodeName = ''; // Store original name to detect changes
+  }
+
+  /**
+   * Initialize the modal
+   * @param {Function} onConnectHikers - Callback for connect hikers button
+   * @param {Function} onViewCoverage - Callback for view coverage button
+   */
+  init(onConnectHikers, onViewCoverage) {
+    // Set up close button
+    document.querySelector(`#${this.modalId} .${this.closeBtnClass}`)?.addEventListener('click', () => {
+      this.closeModal();
+    });
+    
+    // Set up connect hikers button
+    document.getElementById(this.connectHikersBtnId)?.addEventListener('click', () => {
+      if (onConnectHikers && this.activeTowerId !== null) {
+        onConnectHikers(this.activeTowerId);
+        this.closeModal();
+      }
+    });
+    
+    // Set up view coverage button
+    document.getElementById(this.viewCoverageBtnId)?.addEventListener('click', () => {
+      if (onViewCoverage && this.activeTowerId !== null) {
+        onViewCoverage(this.activeTowerId);
+      }
+    });
+    
+    // Set up editable name handling
+    this.setupEditableName();
+    
+    // Add "Live" indicator
+    this.addUpdateIndicator();
+    
+    return this;
+  }
+  
+  /**
+   * Show a toast notification
+   * @param {string} message - The message to display
+   * @param {boolean} isError - Whether this is an error notification
+   */
+  showToast(message, isError = false) {
+    // Remove any existing toasts
+    const existingToast = document.querySelector('.tower-toast');
+    if (existingToast) {
+      existingToast.remove();
+    }
+    
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `tower-toast${isError ? ' error' : ''}`;
+    toast.innerHTML = `
+      <i class="fas fa-${isError ? 'exclamation-circle' : 'check-circle'}"></i>
+      <span>${message}</span>
+    `;
+    
+    // Add to DOM
+    document.body.appendChild(toast);
+    
+    // Remove after animation completes
+    setTimeout(() => {
+      toast.remove();
+    }, 3000);
+  }
+  
+  /**
+   * Update node name in Firebase
+   * @param {string} newName - The new name for the node
+   */
+  async updateNodeName(newName) {
+    if (!this.activeTowerId) return;
+    
+    try {
+      console.log(`Updating tower node ${this.activeTowerId} name to: ${newName}`);
+      const success = await (0,_utils_firebase_js__WEBPACK_IMPORTED_MODULE_1__.updateNodeName)(this.activeTowerId, newName);
+      
+      if (success) {
+        console.log(`Tower node name updated to: ${newName}`);
+        this.showToast(`Tower name updated to: ${newName}`);
+        // UI will update through real-time listener
+      } else {
+        console.error('Failed to update tower node name');
+        this.showToast('Failed to update the tower name', true);
+        
+        // Revert to original name in UI
+        const nameElement = document.getElementById(this.nameId);
+        if (nameElement) {
+          nameElement.textContent = this.originalNodeName;
+        }
+      }
+    } catch (error) {
+      console.error('Error updating tower node name:', error);
+      this.showToast('Error updating tower name', true);
+      
+      // Revert to original name in UI
+      const nameElement = document.getElementById(this.nameId);
+      if (nameElement) {
+        nameElement.textContent = this.originalNodeName;
+      }
+    }
+  }
+
+  /**
+   * Get signal strength color based on percentage
+   * @param {number} strength - Signal strength percentage
+   * @returns {string} CSS color value
+   */
+  getSignalColor(strength) {
+    if (strength >= 80) return '#48bb78'; // Green
+    if (strength >= 60) return '#ed8936'; // Orange
+    if (strength >= 40) return '#ecc94b'; // Yellow
+    return '#f56565'; // Red
+  }
+
+  /**
+   * Add a live update indicator to the modal header
+   */
+  addUpdateIndicator() {
+    const header = document.querySelector(`#${this.modalId} .modal-header h3`);
+    if (header && !header.querySelector('.update-indicator')) {
+      const indicator = document.createElement('div');
+      indicator.classList.add('update-indicator');
+      indicator.innerHTML = '<div class="update-pulse"></div>Live';
+      header.appendChild(indicator);
+    }
+  }
+
+  /**
+   * Open the modal for a specific tower/basecamp
+   * @param {Object} tower - The tower/basecamp object
+   */
+  openModal(tower) {
+    this.activeTowerId = tower.id;
+    this.activeTower = tower;
+    this.updateModalContent(tower);
+    const modal = document.getElementById(this.modalId);
+    modal.classList.add('active');
+  }
+
+  /**
+   * Close the modal
+   */
+  closeModal() {
+    const modal = document.getElementById(this.modalId);
+    modal.classList.remove('active');
+    this.activeTowerId = null;
+    this.activeTower = null;
+  }
+
+  /**
+   * Update the modal content with tower/basecamp data
+   * @param {Object} tower - The tower/basecamp object
+   */
+  updateModalContent(tower) {
+    // Store reference to active tower
+    this.activeTower = tower;
+    
+    console.log(`Updating tower modal for ${tower.type} ${tower.id} with coordinates:`, {
+      lat: tower.lat,
+      lon: tower.lon,
+      timestamp: new Date(tower.lastUpdate).toLocaleTimeString()
+    });
+    
+    // Update all content
+    document.getElementById(this.nameId).textContent = tower.name || `${tower.type} ${tower.id}`;
+    document.getElementById(this.typeId).textContent = tower.type || 'Tower';
+    document.getElementById(this.statusId).textContent = tower.status || 'Active';
+    
+    // Update signal strength
+    const signalStrength = tower.signalStrength || 85;
+    document.getElementById(this.signalStrengthId).textContent = `${Math.round(signalStrength)}%`;
+    
+    const signalBar = document.getElementById(this.signalBarId);
+    if (signalBar) {
+      signalBar.style.width = `${signalStrength}%`;
+      signalBar.style.backgroundColor = this.getSignalColor(signalStrength);
+    }
+    
+    document.getElementById(this.lastUpdateId).textContent = new Date(tower.lastUpdate || Date.now()).toLocaleTimeString();
+    
+    // Format and update coordinates
+    const formattedCoords = `${tower.lat.toFixed(5)}, ${tower.lon.toFixed(5)}`;
+    document.getElementById(this.coordsId).textContent = formattedCoords;
+    
+    // Update coverage range
+    const coverageRange = tower.coverageRange || 500;
+    document.getElementById(this.coverageId).textContent = `${coverageRange}m`;
+    
+    // Flash updates for all values
+    (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.nameId);
+    (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.typeId);
+    (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.statusId);
+    (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.signalStrengthId);
+    (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.coordsId);
+    (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.lastUpdateId);
+    (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.coverageId);
+    
+    // Also update signal bar visual indication
+    if (signalBar) {
+      signalBar.classList.add('updating');
+      setTimeout(() => {
+        signalBar.classList.remove('updating');
+      }, 500);
+    }
+  }
+
+  /**
+   * Check if the modal is currently open for a specific tower
+   * @param {string|number} towerId - The ID of the tower
+   * @returns {boolean} True if modal is open for the specified tower
+   */
+  isOpenForTower(towerId) {
+    return this.activeTowerId === towerId && 
+           document.getElementById(this.modalId).classList.contains('active');
+  }
+
+  /**
+   * Set up editable name handling
+   */
+  setupEditableName() {
+    const nameElement = document.getElementById(this.nameId);
+    if (!nameElement) return;
+    
+    // Store original value when starting edit
+    nameElement.addEventListener('focus', () => {
+      this.originalNodeName = nameElement.textContent.trim();
+      console.log('Started editing tower node name, original:', this.originalNodeName);
+    });
+    
+    // Handle edit completion
+    nameElement.addEventListener('blur', () => {
+      const newName = nameElement.textContent.trim();
+      
+      // Prevent empty names
+      if (!newName) {
+        nameElement.textContent = this.originalNodeName;
+        return;
+      }
+      
+      // Only update if name changed
+      if (newName !== this.originalNodeName) {
+        this.updateNodeName(newName);
+      }
+    });
+    
+    // Handle enter key to confirm edit
+    nameElement.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        nameElement.blur(); // Trigger blur event to save
+      }
+    });
+  }
+}
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (TowerModalComponent); 
 
 /***/ }),
 
@@ -20430,26 +20825,42 @@ class SidebarComponent {
   constructor(containerId = 'sidebar') {
     this.containerId = containerId;
     this.hikerListId = 'hiker-list';
+    this.towerListId = 'tower-list';
     this.totalHikersId = 'total-hikers';
     this.sosCountId = 'sos-count';
+    this.totalTowersId = 'total-towers';
+    this.activeTowersId = 'active-towers';
     this.searchId = 'hiker-search';
     this.settingsButtonId = 'settings-button';
     this.hikerCards = new Map();
+    this.towerCards = new Map();
     this.onHikerClick = null;
+    this.onTowerClick = null;
     this.onSettingsClick = null;
+    this.currentFilter = 'hikers';
   }
 
   /**
    * Initialize the sidebar
    * @param {Function} onHikerClick - Callback for hiker card click events
+   * @param {Function} onTowerClick - Callback for tower card click events
    */
-  init(onHikerClick, onSettingsClick) {
+  init(onHikerClick, onTowerClick, onSettingsClick) {
     this.onHikerClick = onHikerClick;
+    this.onTowerClick = onTowerClick;
     this.onSettingsClick = onSettingsClick;
     
     // Set up search functionality
     document.getElementById(this.searchId)?.addEventListener('input', (e) => {
-      this.filterHikers(e.target.value);
+      this.filterItems(e.target.value);
+    });
+    
+    // Set up filter tabs
+    document.querySelectorAll('.filter-tab').forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        const filter = e.currentTarget.dataset.filter;
+        this.switchFilter(filter);
+      });
     });
     
     const settingsButton = document.getElementById(this.settingsButtonId);
@@ -20465,16 +20876,61 @@ class SidebarComponent {
   }
 
   /**
-   * Filter hikers in the sidebar based on search term
+   * Switch between hikers and towers filter
+   * @param {string} filter - 'hikers' or 'towers'
+   */
+  switchFilter(filter) {
+    this.currentFilter = filter;
+    
+    // Update tab appearance
+    document.querySelectorAll('.filter-tab').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.filter === filter);
+    });
+    
+    // Show/hide appropriate lists and stats
+    const hikerList = document.getElementById(this.hikerListId);
+    const towerList = document.getElementById(this.towerListId);
+    const hikerStats = document.querySelectorAll('.hikers-stat');
+    const towerStats = document.querySelectorAll('.towers-stat');
+    
+    if (filter === 'hikers') {
+      hikerList.style.display = 'block';
+      towerList.style.display = 'none';
+      hikerStats.forEach(stat => stat.style.display = 'flex');
+      towerStats.forEach(stat => stat.style.display = 'none');
+    } else {
+      hikerList.style.display = 'none';
+      towerList.style.display = 'block';
+      hikerStats.forEach(stat => stat.style.display = 'none');
+      towerStats.forEach(stat => stat.style.display = 'flex');
+    }
+    
+    // Clear search
+    const searchInput = document.getElementById(this.searchId);
+    if (searchInput) {
+      searchInput.value = '';
+      searchInput.placeholder = filter === 'hikers' ? 'Search hikers...' : 'Search towers...';
+    }
+  }
+
+  /**
+   * Filter items in the sidebar based on search term
    * @param {string} searchTerm - The search term to filter by
    */
-  filterHikers(searchTerm) {
+  filterItems(searchTerm) {
     const term = searchTerm.toLowerCase();
     
-    document.querySelectorAll('.hiker-card').forEach(card => {
-      const hikerName = card.querySelector('.hiker-name').textContent.toLowerCase();
-      card.style.display = hikerName.includes(term) ? 'block' : 'none';
-    });
+    if (this.currentFilter === 'hikers') {
+      document.querySelectorAll('.hiker-card').forEach(card => {
+        const hikerName = card.querySelector('.hiker-name').textContent.toLowerCase();
+        card.style.display = hikerName.includes(term) ? 'block' : 'none';
+      });
+    } else {
+      document.querySelectorAll('.tower-card').forEach(card => {
+        const towerName = card.querySelector('.tower-name').textContent.toLowerCase();
+        card.style.display = towerName.includes(term) ? 'block' : 'none';
+      });
+    }
   }
 
   /**
@@ -20527,6 +20983,53 @@ class SidebarComponent {
   }
 
   /**
+   * Create a tower card element
+   * @param {Object} tower - The tower object
+   * @returns {HTMLElement} The tower card element
+   */
+  createTowerCard(tower) {
+    const card = document.createElement('div');
+    card.className = 'tower-card';
+    card.setAttribute('data-tower-id', tower.id);
+    
+    const typeIcon = tower.type === 'Tower' ? 'fa-broadcast-tower' : 'fa-campground';
+    const typeClass = tower.type.toLowerCase();
+    
+    card.innerHTML = `
+      <div class="tower-info">
+        <div class="tower-icon ${typeClass}">
+          <i class="fas ${typeIcon}"></i>
+        </div>
+        <div class="tower-name-type">
+          <div class="tower-name">${tower.name}</div>
+          <div class="tower-type">
+            <i class="fas ${typeIcon}"></i>
+            ${tower.type}
+          </div>
+        </div>
+      </div>
+      <div class="tower-details">
+        <div class="tower-detail-item">
+          <i class="fas fa-signal"></i>
+          ${Math.round(tower.signalStrength)}%
+        </div>
+        <div class="tower-status ${tower.status.toLowerCase()}">
+          ${tower.status}
+        </div>
+      </div>
+    `;
+    
+    if (this.onTowerClick) {
+      card.addEventListener('click', () => {
+        console.log('Tower card clicked:', tower);
+        this.onTowerClick(tower);
+      });
+    }
+    
+    return card;
+  }
+
+  /**
    * Update the sidebar with current hiker data
    * @param {Array} hikers - Array of hiker objects
    */
@@ -20550,6 +21053,32 @@ class SidebarComponent {
     // Update stats
     document.getElementById(this.totalHikersId).textContent = hikers.length;
     document.getElementById(this.sosCountId).textContent = sosCount;
+  }
+
+  /**
+   * Update the sidebar with current tower data
+   * @param {Array} towers - Array of tower objects
+   */
+  updateTowerList(towers) {
+    const towerList = document.getElementById(this.towerListId);
+    if (!towerList) return;
+    
+    // Clear the current list
+    towerList.innerHTML = '';
+    
+    // Count active towers
+    let activeCount = 0;
+    towers.forEach(tower => {
+      if (tower.status === 'Active') activeCount++;
+      
+      // Create and append the tower card
+      const card = this.createTowerCard(tower);
+      towerList.appendChild(card);
+    });
+    
+    // Update stats
+    document.getElementById(this.totalTowersId).textContent = towers.length;
+    document.getElementById(this.activeTowersId).textContent = activeCount;
   }
 
   renderHikerCard(hiker) {
@@ -20720,6 +21249,956 @@ class SidebarComponent {
 }
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (SidebarComponent); 
+
+/***/ }),
+
+/***/ "./src/components/Tower/TowerControls.js":
+/*!***********************************************!*\
+  !*** ./src/components/Tower/TowerControls.js ***!
+  \***********************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/**
+ * Tower Controls - Handles manual tower addition and controls
+ */
+class TowerControls {
+  constructor(towerManager, mapComponent) {
+    this.towerManager = towerManager;
+    this.mapComponent = mapComponent;
+    this.isAddingTower = false;
+    this.addTowerBtn = null;
+    this.mapClickHandler = null;
+    this.cancelHandler = null;
+  }
+
+  /**
+   * Initialize tower controls
+   */
+  init() {
+    this.createFloatingButton();
+    this.setupEventListeners();
+    return this;
+  }
+
+  /**
+   * Create floating add tower button
+   */
+  createFloatingButton() {
+    // Check if button already exists
+    if (document.getElementById('add-tower-btn')) {
+      return;
+    }
+
+    this.addTowerBtn = document.createElement('button');
+    this.addTowerBtn.id = 'add-tower-btn';
+    this.addTowerBtn.className = 'floating-btn add-tower-btn';
+    this.addTowerBtn.innerHTML = `
+      <i class="fas fa-plus"></i>
+      <span class="btn-tooltip">Add Tower</span>
+    `;
+    this.addTowerBtn.title = 'Click to add a new tower or basecamp';
+
+    // Position the button
+    this.addTowerBtn.style.position = 'fixed';
+    this.addTowerBtn.style.bottom = '80px';
+    this.addTowerBtn.style.right = '20px';
+    this.addTowerBtn.style.zIndex = '1000';
+
+    document.body.appendChild(this.addTowerBtn);
+  }
+
+  /**
+   * Setup event listeners
+   */
+  setupEventListeners() {
+    if (this.addTowerBtn) {
+      this.addTowerBtn.addEventListener('click', () => {
+        this.toggleAddMode();
+      });
+    }
+
+    // ESC key to cancel adding mode
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.isAddingTower) {
+        this.cancelAddMode();
+      }
+    });
+  }
+
+  /**
+   * Toggle add tower mode
+   */
+  toggleAddMode() {
+    if (this.isAddingTower) {
+      this.cancelAddMode();
+    } else {
+      this.startAddMode();
+    }
+  }
+
+  /**
+   * Start add tower mode
+   */
+  startAddMode() {
+    this.isAddingTower = true;
+    
+    // Update button appearance
+    this.addTowerBtn.classList.add('active');
+    this.addTowerBtn.innerHTML = `
+      <i class="fas fa-times"></i>
+      <span class="btn-tooltip">Cancel</span>
+    `;
+
+    // Change cursor
+    document.body.style.cursor = 'crosshair';
+    
+    // Add map click handler
+    this.mapClickHandler = (e) => {
+      this.handleMapClick(e);
+    };
+    
+    const map = this.mapComponent.getMap();
+    if (map) {
+      map.on('click', this.mapClickHandler);
+    }
+
+    // Show instruction
+    this.showInstruction('Click on the map to place a tower or basecamp. Press ESC to cancel.');
+
+    console.log('Started add tower mode');
+  }
+
+  /**
+   * Cancel add tower mode
+   */
+  cancelAddMode() {
+    this.isAddingTower = false;
+    
+    // Reset button appearance
+    this.addTowerBtn.classList.remove('active');
+    this.addTowerBtn.innerHTML = `
+      <i class="fas fa-plus"></i>
+      <span class="btn-tooltip">Add Tower</span>
+    `;
+
+    // Reset cursor
+    document.body.style.cursor = 'default';
+    
+    // Remove map click handler
+    const map = this.mapComponent.getMap();
+    if (map && this.mapClickHandler) {
+      map.off('click', this.mapClickHandler);
+      this.mapClickHandler = null;
+    }
+
+    // Hide instruction
+    this.hideInstruction();
+
+    console.log('Cancelled add tower mode');
+  }
+
+  /**
+   * Handle map click during add mode
+   * @param {Object} e - Leaflet click event
+   */
+  handleMapClick(e) {
+    const lat = e.latlng.lat;
+    const lon = e.latlng.lng;
+    
+    console.log(`Map clicked at: ${lat}, ${lon}`);
+    
+    // Show tower creation dialog
+    this.showTowerCreationDialog(lat, lon);
+  }
+
+  /**
+   * Show tower creation dialog
+   * @param {number} lat - Latitude
+   * @param {number} lon - Longitude
+   */
+  showTowerCreationDialog(lat, lon) {
+    // Create modal backdrop
+    const backdrop = document.createElement('div');
+    backdrop.className = 'tower-creation-backdrop';
+    backdrop.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    `;
+
+    // Create dialog
+    const dialog = document.createElement('div');
+    dialog.className = 'tower-creation-dialog';
+    dialog.style.cssText = `
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      width: 400px;
+      max-width: 90vw;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    `;
+
+    dialog.innerHTML = `
+      <h3 style="margin: 0 0 20px 0; color: #2d3748; display: flex; align-items: center; gap: 10px;">
+        <i class="fas fa-broadcast-tower"></i>
+        Add New Infrastructure
+      </h3>
+      
+      <form id="tower-creation-form">
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #4a5568;">Name:</label>
+          <input type="text" id="tower-name" required 
+                 style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;"
+                 placeholder="Enter tower/basecamp name">
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #4a5568;">Type:</label>
+          <select id="tower-type" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+            <option value="Tower">📡 Communication Tower</option>
+            <option value="Basecamp">🏕️ Basecamp Station</option>
+          </select>
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 20px;">
+          <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #4a5568;">Location:</label>
+          <div style="padding: 10px; background: #f7fafc; border-radius: 8px; color: #4a5568; font-family: monospace;">
+            ${lat.toFixed(5)}, ${lon.toFixed(5)}
+          </div>
+        </div>
+        
+        <div class="form-actions" style="display: flex; gap: 12px; justify-content: flex-end;">
+          <button type="button" id="cancel-tower" 
+                  style="padding: 10px 20px; border: 2px solid #e2e8f0; background: white; color: #4a5568; border-radius: 8px; font-weight: 500; cursor: pointer;">
+            Cancel
+          </button>
+          <button type="submit" 
+                  style="padding: 10px 20px; border: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; font-weight: 500; cursor: pointer;">
+            <i class="fas fa-plus"></i> Create
+          </button>
+        </div>
+      </form>
+    `;
+
+    backdrop.appendChild(dialog);
+    document.body.appendChild(backdrop);
+
+    // Focus on name input
+    setTimeout(() => {
+      document.getElementById('tower-name').focus();
+    }, 100);
+
+    // Handle form submission
+    document.getElementById('tower-creation-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const name = document.getElementById('tower-name').value.trim();
+      const type = document.getElementById('tower-type').value;
+      
+      if (name) {
+        this.createTower(name, lat, lon, type);
+        backdrop.remove();
+        this.cancelAddMode();
+      }
+    });
+
+    // Handle cancel
+    document.getElementById('cancel-tower').addEventListener('click', () => {
+      backdrop.remove();
+    });
+
+    // Handle backdrop click
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) {
+        backdrop.remove();
+      }
+    });
+  }
+
+  /**
+   * Create a new tower
+   * @param {string} name - Tower name
+   * @param {number} lat - Latitude
+   * @param {number} lon - Longitude
+   * @param {string} type - Tower type
+   */
+  createTower(name, lat, lon, type) {
+    try {
+      const tower = this.towerManager.addTower(name, lat, lon, type);
+      
+      this.showSuccessMessage(`${type} "${name}" added successfully!`);
+      
+      console.log(`Created new ${type}:`, tower);
+      
+      // Optionally center map on new tower
+      setTimeout(() => {
+        this.mapComponent.centerMap([lat, lon], 15);
+      }, 500);
+      
+    } catch (error) {
+      console.error('Error creating tower:', error);
+      this.showErrorMessage('Failed to create tower. Please try again.');
+    }
+  }
+
+  /**
+   * Show instruction message
+   * @param {string} message - Instruction text
+   */
+  showInstruction(message) {
+    this.hideInstruction(); // Remove any existing instruction
+    
+    const instruction = document.createElement('div');
+    instruction.id = 'tower-instruction';
+    instruction.style.cssText = `
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 1500;
+      font-size: 14px;
+      font-weight: 500;
+      max-width: 90vw;
+      text-align: center;
+    `;
+    instruction.textContent = message;
+    
+    document.body.appendChild(instruction);
+  }
+
+  /**
+   * Hide instruction message
+   */
+  hideInstruction() {
+    const existing = document.getElementById('tower-instruction');
+    if (existing) {
+      existing.remove();
+    }
+  }
+
+  /**
+   * Show success message
+   * @param {string} message - Success message
+   */
+  showSuccessMessage(message) {
+    this.showTemporaryMessage(message, 'success');
+  }
+
+  /**
+   * Show error message
+   * @param {string} message - Error message
+   */
+  showErrorMessage(message) {
+    this.showTemporaryMessage(message, 'error');
+  }
+
+  /**
+   * Show temporary message
+   * @param {string} message - Message text
+   * @param {string} type - Message type ('success' or 'error')
+   */
+  showTemporaryMessage(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      background: ${type === 'success' ? 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)' : 'linear-gradient(135deg, #f56565 0%, #e53e3e 100%)'};
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 1500;
+      font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      animation: slideInRight 0.3s ease-out;
+    `;
+    
+    toast.innerHTML = `
+      <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+      ${message}
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+      toast.style.animation = 'slideOutRight 0.3s ease-in';
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  }
+
+  /**
+   * Destroy tower controls
+   */
+  destroy() {
+    if (this.addTowerBtn) {
+      this.addTowerBtn.remove();
+    }
+    
+    this.cancelAddMode();
+    this.hideInstruction();
+  }
+}
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (TowerControls); 
+
+/***/ }),
+
+/***/ "./src/components/Tower/TowerManager.js":
+/*!**********************************************!*\
+  !*** ./src/components/Tower/TowerManager.js ***!
+  \**********************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _models_Tower_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../models/Tower.js */ "./src/models/Tower.js");
+/**
+ * Tower Manager - Handles all tower-related operations
+ */
+
+
+class TowerManager {
+  constructor() {
+    this.towers = [];
+    this.updateCallbacks = [];
+    this.nextId = 1;
+  }
+
+  /**
+   * Add a new tower
+   * @param {string} name - Tower name
+   * @param {number} lat - Latitude
+   * @param {number} lon - Longitude  
+   * @param {string} type - Tower type ('Tower' or 'Basecamp')
+   * @param {Object} options - Additional options
+   * @returns {Tower} The created tower
+   */
+  addTower(name, lat, lon, type = 'Tower', options = {}) {
+    const id = `tower_${this.nextId++}`;
+    const tower = new _models_Tower_js__WEBPACK_IMPORTED_MODULE_0__["default"](id, name, lat, lon, type, 'Active', 85, options);
+    
+    this.towers.push(tower);
+    this.notifyUpdate();
+    
+    console.log(`Added new ${type.toLowerCase()}: ${name} at ${lat}, ${lon}`);
+    return tower;
+  }
+
+  /**
+   * Remove a tower by ID
+   * @param {string} towerId - Tower ID to remove
+   * @returns {boolean} Success status
+   */
+  removeTower(towerId) {
+    const index = this.towers.findIndex(t => t.id === towerId);
+    if (index !== -1) {
+      const tower = this.towers[index];
+      this.towers.splice(index, 1);
+      this.notifyUpdate();
+      console.log(`Removed tower: ${tower.name}`);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Update tower information
+   * @param {string} towerId - Tower ID
+   * @param {Object} updates - Updates to apply
+   * @returns {boolean} Success status
+   */
+  updateTower(towerId, updates) {
+    const tower = this.getTowerById(towerId);
+    if (!tower) return false;
+
+    // Apply updates
+    Object.keys(updates).forEach(key => {
+      if (key in tower) {
+        tower[key] = updates[key];
+      }
+    });
+
+    tower.lastUpdate = Date.now();
+    this.notifyUpdate();
+    return true;
+  }
+
+  /**
+   * Get tower by ID
+   * @param {string} towerId - Tower ID
+   * @returns {Tower|null} Tower object or null
+   */
+  getTowerById(towerId) {
+    return this.towers.find(t => t.id === towerId) || null;
+  }
+
+  /**
+   * Get all towers
+   * @returns {Array<Tower>} Array of all towers
+   */
+  getAllTowers() {
+    return [...this.towers];
+  }
+
+  /**
+   * Get towers by type
+   * @param {string} type - Tower type ('Tower' or 'Basecamp')
+   * @returns {Array<Tower>} Filtered towers
+   */
+  getTowersByType(type) {
+    return this.towers.filter(t => t.type === type);
+  }
+
+  /**
+   * Get towers by status
+   * @param {string} status - Tower status
+   * @returns {Array<Tower>} Filtered towers
+   */
+  getTowersByStatus(status) {
+    return this.towers.filter(t => t.status === status);
+  }
+
+  /**
+   * Get operational towers
+   * @returns {Array<Tower>} Operational towers
+   */
+  getOperationalTowers() {
+    return this.towers.filter(t => t.isOperational());
+  }
+
+  /**
+   * Find nearest tower to coordinates
+   * @param {number} lat - Latitude
+   * @param {number} lon - Longitude
+   * @param {string} type - Optional type filter
+   * @returns {Tower|null} Nearest tower or null
+   */
+  findNearestTower(lat, lon, type = null) {
+    let towers = this.towers;
+    if (type) {
+      towers = towers.filter(t => t.type === type);
+    }
+
+    if (towers.length === 0) return null;
+
+    let nearest = towers[0];
+    let minDistance = this.calculateDistance(lat, lon, nearest.lat, nearest.lon);
+
+    towers.forEach(tower => {
+      const distance = this.calculateDistance(lat, lon, tower.lat, tower.lon);
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearest = tower;
+      }
+    });
+
+    return nearest;
+  }
+
+  /**
+   * Calculate distance between two points
+   * @param {number} lat1 - First point latitude
+   * @param {number} lon1 - First point longitude
+   * @param {number} lat2 - Second point latitude
+   * @param {number} lon2 - Second point longitude
+   * @returns {number} Distance in kilometers
+   */
+  calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
+
+  /**
+   * Connect hiker to nearest available tower
+   * @param {Object} hiker - Hiker object
+   * @returns {Tower|null} Connected tower or null
+   */
+  connectHikerToTower(hiker) {
+    const nearestTower = this.findNearestTower(hiker.lat, hiker.lon);
+    if (nearestTower && nearestTower.isOperational()) {
+      nearestTower.addConnection();
+      this.notifyUpdate();
+      return nearestTower;
+    }
+    return null;
+  }
+
+  /**
+   * Disconnect hiker from tower
+   * @param {string} towerId - Tower ID
+   * @returns {boolean} Success status
+   */
+  disconnectHikerFromTower(towerId) {
+    const tower = this.getTowerById(towerId);
+    if (tower) {
+      const success = tower.removeConnection();
+      if (success) {
+        this.notifyUpdate();
+      }
+      return success;
+    }
+    return false;
+  }
+
+  /**
+   * Load towers from data
+   * @param {Array} towersData - Array of tower data
+   */
+  loadTowers(towersData) {
+    this.towers = towersData.map(data => 
+      data instanceof _models_Tower_js__WEBPACK_IMPORTED_MODULE_0__["default"] ? data : _models_Tower_js__WEBPACK_IMPORTED_MODULE_0__["default"].fromJSON(data)
+    );
+    this.updateNextId();
+    this.notifyUpdate();
+  }
+
+  /**
+   * Update next ID based on existing towers
+   */
+  updateNextId() {
+    const maxId = this.towers.reduce((max, tower) => {
+      const num = parseInt(tower.id.replace('tower_', ''));
+      return isNaN(num) ? max : Math.max(max, num);
+    }, 0);
+    this.nextId = maxId + 1;
+  }
+
+  /**
+   * Register update callback
+   * @param {Function} callback - Callback function
+   */
+  onUpdate(callback) {
+    this.updateCallbacks.push(callback);
+  }
+
+  /**
+   * Notify all callbacks of update
+   */
+  notifyUpdate() {
+    this.updateCallbacks.forEach(callback => {
+      try {
+        callback(this.towers);
+      } catch (error) {
+        console.error('Error in tower update callback:', error);
+      }
+    });
+  }
+
+  /**
+   * Get tower statistics
+   * @returns {Object} Statistics object
+   */
+  getStatistics() {
+    const total = this.towers.length;
+    const active = this.towers.filter(t => t.status === 'Active').length;
+    const maintenance = this.towers.filter(t => t.status === 'Maintenance').length;
+    const offline = this.towers.filter(t => t.status === 'Offline').length;
+    const towers = this.towers.filter(t => t.type === 'Tower').length;
+    const basecamps = this.towers.filter(t => t.type === 'Basecamp').length;
+    const totalConnections = this.towers.reduce((sum, t) => sum + t.connectionCount, 0);
+
+    return {
+      total,
+      active,
+      maintenance,
+      offline,
+      towers,
+      basecamps,
+      totalConnections,
+      operational: this.getOperationalTowers().length
+    };
+  }
+
+  /**
+   * Export towers data
+   * @returns {Array} Serializable tower data
+   */
+  exportData() {
+    return this.towers.map(tower => tower.toJSON());
+  }
+}
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (TowerManager); 
+
+/***/ }),
+
+/***/ "./src/models/Tower.js":
+/*!*****************************!*\
+  !*** ./src/models/Tower.js ***!
+  \*****************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/**
+ * Tower Model - Represents a communication tower or basecamp
+ */
+class Tower {
+  /**
+   * Create a new Tower
+   * @param {string|number} id - Unique identifier for the tower
+   * @param {string} name - Tower name
+   * @param {number} lat - Latitude coordinate
+   * @param {number} lon - Longitude coordinate
+   * @param {string} type - Tower type ('Tower' or 'Basecamp')
+   * @param {string} status - Tower status ('Active', 'Maintenance', 'Offline')
+   * @param {number} signalStrength - Signal strength percentage (0-100)
+   * @param {Object} options - Additional options
+   */
+  constructor(id, name, lat, lon, type = 'Tower', status = 'Active', signalStrength = 85, options = {}) {
+    this.id = id;
+    this.name = name;
+    this.lat = lat;
+    this.lon = lon;
+    this.type = type; // 'Tower' or 'Basecamp'
+    this.status = status; // 'Active', 'Maintenance', 'Offline'
+    this.signalStrength = signalStrength;
+    this.lastUpdate = Date.now();
+    
+    // Optional coverage range (can be null)
+    this.coverageRange = options.coverageRange || null;
+    
+    // Type-specific properties
+    if (type === 'Tower') {
+      this.antennaHeight = options.antennaHeight || 20 + Math.random() * 30; // 20-50m
+      this.powerSource = options.powerSource || 'Grid';
+      this.frequency = options.frequency || '2.4GHz';
+    } else if (type === 'Basecamp') {
+      this.capacity = options.capacity || 10 + Math.random() * 20; // 10-30 people
+      this.facilities = options.facilities || ['Shelter', 'First Aid', 'Communication'];
+      this.commander = options.commander || null;
+    }
+    
+    // Additional properties
+    this.isOnline = status === 'Active';
+    this.connectionCount = options.connectionCount || 0;
+    this.lastMaintenance = options.lastMaintenance || null;
+  }
+
+  /**
+   * Update tower location
+   * @param {number} lat - New latitude
+   * @param {number} lon - New longitude
+   */
+  updateLocation(lat, lon) {
+    this.lat = lat;
+    this.lon = lon;
+    this.lastUpdate = Date.now();
+  }
+
+  /**
+   * Update tower status
+   * @param {string} status - New status
+   */
+  updateStatus(status) {
+    this.status = status;
+    this.isOnline = status === 'Active';
+    this.lastUpdate = Date.now();
+  }
+
+  /**
+   * Update signal strength
+   * @param {number} strength - New signal strength (0-100)
+   */
+  updateSignalStrength(strength) {
+    this.signalStrength = Math.max(0, Math.min(100, strength));
+    this.lastUpdate = Date.now();
+  }
+
+  /**
+   * Get status icon based on current status
+   * @returns {string} Font Awesome icon class
+   */
+  getStatusIcon() {
+    switch(this.status) {
+      case 'Active': return 'fa-check-circle';
+      case 'Maintenance': return 'fa-wrench';
+      case 'Offline': return 'fa-times-circle';
+      default: return 'fa-question-circle';
+    }
+  }
+
+  /**
+   * Get type icon based on tower type
+   * @returns {string} Font Awesome icon class
+   */
+  getTypeIcon() {
+    return this.type === 'Tower' ? 'fa-broadcast-tower' : 'fa-campground';
+  }
+
+  /**
+   * Get status color
+   * @returns {string} CSS color value
+   */
+  getStatusColor() {
+    switch(this.status) {
+      case 'Active': return '#48bb78';
+      case 'Maintenance': return '#ed8936';
+      case 'Offline': return '#f56565';
+      default: return '#a0aec0';
+    }
+  }
+
+  /**
+   * Get signal strength color
+   * @returns {string} CSS color value
+   */
+  getSignalColor() {
+    if (this.signalStrength >= 80) return '#48bb78'; // Green
+    if (this.signalStrength >= 60) return '#ed8936'; // Orange
+    if (this.signalStrength >= 40) return '#ecc94b'; // Yellow
+    return '#f56565'; // Red
+  }
+
+  /**
+   * Check if tower is operational
+   * @returns {boolean} True if tower is active and has good signal
+   */
+  isOperational() {
+    return this.status === 'Active' && this.signalStrength >= 30;
+  }
+
+  /**
+   * Get connection capacity (for basecamps)
+   * @returns {number|null} Maximum capacity or null for towers
+   */
+  getCapacity() {
+    return this.type === 'Basecamp' ? this.capacity : null;
+  }
+
+  /**
+   * Get remaining capacity (for basecamps)
+   * @returns {number|null} Remaining capacity or null for towers
+   */
+  getRemainingCapacity() {
+    if (this.type === 'Basecamp') {
+      return Math.max(0, this.capacity - this.connectionCount);
+    }
+    return null;
+  }
+
+  /**
+   * Add connection to tower
+   * @returns {boolean} Success status
+   */
+  addConnection() {
+    if (this.type === 'Basecamp' && this.connectionCount < this.capacity) {
+      this.connectionCount++;
+      this.lastUpdate = Date.now();
+      return true;
+    } else if (this.type === 'Tower') {
+      this.connectionCount++;
+      this.lastUpdate = Date.now();
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Remove connection from tower
+   * @returns {boolean} Success status
+   */
+  removeConnection() {
+    if (this.connectionCount > 0) {
+      this.connectionCount--;
+      this.lastUpdate = Date.now();
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Convert tower to plain object for serialization
+   * @returns {Object} Plain object representation
+   */
+  toJSON() {
+    return {
+      id: this.id,
+      name: this.name,
+      lat: this.lat,
+      lon: this.lon,
+      type: this.type,
+      status: this.status,
+      signalStrength: this.signalStrength,
+      lastUpdate: this.lastUpdate,
+      coverageRange: this.coverageRange,
+      antennaHeight: this.antennaHeight,
+      powerSource: this.powerSource,
+      frequency: this.frequency,
+      capacity: this.capacity,
+      facilities: this.facilities,
+      commander: this.commander,
+      isOnline: this.isOnline,
+      connectionCount: this.connectionCount,
+      lastMaintenance: this.lastMaintenance
+    };
+  }
+
+  /**
+   * Create Tower instance from plain object
+   * @param {Object} data - Plain object data
+   * @returns {Tower} Tower instance
+   */
+  static fromJSON(data) {
+    const tower = new Tower(
+      data.id,
+      data.name,
+      data.lat,
+      data.lon,
+      data.type,
+      data.status,
+      data.signalStrength,
+      {
+        coverageRange: data.coverageRange,
+        antennaHeight: data.antennaHeight,
+        powerSource: data.powerSource,
+        frequency: data.frequency,
+        capacity: data.capacity,
+        facilities: data.facilities,
+        commander: data.commander,
+        connectionCount: data.connectionCount,
+        lastMaintenance: data.lastMaintenance
+      }
+    );
+    
+    tower.lastUpdate = data.lastUpdate || Date.now();
+    return tower;
+  }
+}
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Tower); 
 
 /***/ }),
 
@@ -21892,23 +23371,22 @@ function parseTimestamp(timestamp) {
   
   // If it's a string, try to parse it
   if (typeof timestamp === 'string') {
-    // Handle time format like "03:39:05" (UTC time)
+    // Handle time format like "03:39:05" (local time)
     if (timestamp.includes(':')) {
       try {
-        // Get current date in UTC
+        // Get current date
         const now = new Date();
-        const utcYear = now.getUTCFullYear();
-        const utcMonth = now.getUTCMonth();
-        const utcDay = now.getUTCDate();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+        const day = now.getDate();
         
         // Parse hours, minutes, seconds
         const [hours, minutes, seconds] = timestamp.split(':').map(Number);
         
-        // Create UTC date
-        const date = new Date(Date.UTC(utcYear, utcMonth, utcDay, hours, minutes, seconds));
+        // Create date in local time
+        const date = new Date(year, month, day, hours, minutes, seconds);
         
-        console.log(`Parsed UTC time string "${timestamp}" to:`, {
-          utcTime: date.toUTCString(),
+        console.log(`Parsed time string "${timestamp}" to:`, {
           localTime: date.toString(),
           milliseconds: date.getTime()
         });
@@ -22451,6 +23929,7 @@ async function updateNodeName(nodeId, name) {
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   createSampleHikers: () => (/* binding */ createSampleHikers),
+/* harmony export */   createSampleTowers: () => (/* binding */ createSampleTowers),
 /* harmony export */   flashUpdate: () => (/* binding */ flashUpdate),
 /* harmony export */   formatTimeAgo: () => (/* binding */ formatTimeAgo),
 /* harmony export */   getBatteryColor: () => (/* binding */ getBatteryColor),
@@ -22540,6 +24019,40 @@ function createSampleHikers(count = 10, centerCoords = [3.139, 101.6869]) {
       const lon = centerCoords[1] + (Math.random() - 0.5) * 0.05;
       const battery = 50 + Math.random() * 50; // 50-100%
       return new Hiker(index, name, lat, lon, 'Active', battery);
+    });
+  });
+}
+
+/**
+ * Create sample tower/basecamp data for testing
+ * @param {number} count - Number of towers to create (default 3)
+ * @param {Array} centerCoords - [lat, lon] center coordinates
+ * @returns {Promise<Array>} Promise resolving to array of Tower objects
+ */
+function createSampleTowers(count = 3, centerCoords = [3.139, 101.6869]) {
+  const towerNames = [
+    'Central Tower', 'North Base', 'South Station', 'East Point', 'West Camp',
+    'Peak Tower', 'Valley Base', 'Ridge Station', 'Summit Point', 'Forest Camp'
+  ];
+  
+  const types = ['Tower', 'Basecamp'];
+  const statuses = ['Active', 'Maintenance', 'Offline'];
+  
+  // Import Tower model dynamically to avoid circular dependency
+  return Promise.resolve(/*! import() */).then(__webpack_require__.bind(__webpack_require__, /*! ../models/Tower.js */ "./src/models/Tower.js")).then(({ default: Tower }) => {
+    return towerNames.slice(0, count).map((name, index) => {
+      // Create towers with more spread out positions than hikers
+      const lat = centerCoords[0] + (Math.random() - 0.5) * 0.1;
+      const lon = centerCoords[1] + (Math.random() - 0.5) * 0.1;
+      const type = types[Math.floor(Math.random() * types.length)];
+      const status = statuses[Math.floor(Math.random() * statuses.length)];
+      const signalStrength = 60 + Math.random() * 40; // 60-100%
+      
+      const options = {
+        coverageRange: Math.round(300 + Math.random() * 400), // Optional: 300-700m
+      };
+      
+      return new Tower(`tower_${index}`, name, lat, lon, type, status, signalStrength, options);
     });
   });
 } 
@@ -22813,8 +24326,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _components_Map_Map_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./components/Map/Map.js */ "./src/components/Map/Map.js");
 /* harmony import */ var _components_Sidebar_Sidebar_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./components/Sidebar/Sidebar.js */ "./src/components/Sidebar/Sidebar.js");
 /* harmony import */ var _components_Modal_Modal_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./components/Modal/Modal.js */ "./src/components/Modal/Modal.js");
-/* harmony import */ var _components_Settings_Settings_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./components/Settings/Settings.js */ "./src/components/Settings/Settings.js");
-/* harmony import */ var _modules_TrackSafetyModule_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./modules/TrackSafetyModule.js */ "./src/modules/TrackSafetyModule.js");
+/* harmony import */ var _components_Modal_TowerModal_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./components/Modal/TowerModal.js */ "./src/components/Modal/TowerModal.js");
+/* harmony import */ var _components_Settings_Settings_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./components/Settings/Settings.js */ "./src/components/Settings/Settings.js");
+/* harmony import */ var _modules_TrackSafetyModule_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./modules/TrackSafetyModule.js */ "./src/modules/TrackSafetyModule.js");
+/* harmony import */ var _components_Tower_TowerManager_js__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./components/Tower/TowerManager.js */ "./src/components/Tower/TowerManager.js");
+/* harmony import */ var _components_Tower_TowerControls_js__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./components/Tower/TowerControls.js */ "./src/components/Tower/TowerControls.js");
 /**
  * Main Application - Coordinates all components
  */
@@ -22826,14 +24342,21 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+
+
 class HikerTrackingApp {
   constructor() {
     this.hikers = [];
+    this.towers = [];
     this.map = new _components_Map_Map_js__WEBPACK_IMPORTED_MODULE_2__["default"]();
     this.sidebar = new _components_Sidebar_Sidebar_js__WEBPACK_IMPORTED_MODULE_3__["default"]();
     this.modal = new _components_Modal_Modal_js__WEBPACK_IMPORTED_MODULE_4__["default"]();
-    this.settings = new _components_Settings_Settings_js__WEBPACK_IMPORTED_MODULE_5__["default"]();
+    this.towerModal = new _components_Modal_TowerModal_js__WEBPACK_IMPORTED_MODULE_5__["default"]();
+    this.settings = new _components_Settings_Settings_js__WEBPACK_IMPORTED_MODULE_6__["default"]();
     this.trackSafetyModule = null; // Will be initialized in init()
+    this.towerManager = new _components_Tower_TowerManager_js__WEBPACK_IMPORTED_MODULE_8__["default"]();
+    this.towerControls = null; // Will be initialized in init()
     this.simulationInterval = null;
     this.simulationSpeed = 3000; // 3 seconds instead of 1 second
     this.defaultCenter = [3.139, 101.6869];
@@ -22909,9 +24432,20 @@ class HikerTrackingApp {
     this.changeMapStyle(initialSettings.map.style);
     
     // Initialize sidebar component
-    this.sidebar.init((hiker) => {
-      this.handleHikerClick(hiker);
-    });
+    this.sidebar.init(
+      // Hiker click callback
+      (hiker) => {
+        this.handleHikerClick(hiker);
+      },
+      // Tower click callback
+      (tower) => {
+        this.handleTowerClick(tower);
+      },
+      // Settings click callback
+      () => {
+        this.settings.openModal();
+      }
+    );
     
     // Initialize modal component
     this.modal.init(
@@ -22937,9 +24471,31 @@ class HikerTrackingApp {
         this.handleSosAction(hikerId, 'reset');
       }
     );
+
+    // Initialize tower modal component
+    this.towerModal.init(
+      // Connect hikers callback
+      (towerId) => {
+        this.handleTowerConnectHikers(towerId);
+      },
+      // View coverage callback
+      (towerId) => {
+        this.handleTowerViewCoverage(towerId);
+      }
+    );
+
+    // Initialize tower controls for adding towers
+    this.towerControls = new _components_Tower_TowerControls_js__WEBPACK_IMPORTED_MODULE_9__["default"](this.towerManager, this.map);
+    this.towerControls.init();
+
+    // Set up tower manager update callback
+    this.towerManager.onUpdate((towers) => {
+      this.towers = towers;
+      this.renderAll();
+    });
     
     // Initialize track safety module
-    this.trackSafetyModule = new _modules_TrackSafetyModule_js__WEBPACK_IMPORTED_MODULE_6__["default"](
+    this.trackSafetyModule = new _modules_TrackSafetyModule_js__WEBPACK_IMPORTED_MODULE_7__["default"](
       this,
       this.map,
       {
@@ -22992,6 +24548,8 @@ class HikerTrackingApp {
       // Use simulated data
       const settings = this.settings.getSettings();
       this.hikers = await (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.createSampleHikers)(settings.simulation.hikersCount || 10);
+      const sampleTowers = await (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.createSampleTowers)(3); // Create 3 sample towers/basecamps
+      this.towerManager.loadTowers(sampleTowers);
       
       // Start simulation
       this.startSimulation();
@@ -23245,6 +24803,63 @@ class HikerTrackingApp {
   }
 
   /**
+   * Handle tower connect hikers action
+   * @param {string} towerId - The ID of the tower
+   */
+  handleTowerConnectHikers(towerId) {
+    console.log(`Connecting hikers to tower ${towerId}`);
+    
+    // Find hikers within the tower's range and connect them
+    // This is a placeholder for actual connection logic
+    this.settings.showNotification(
+      `Connected nearby hikers to tower ${towerId}`,
+      3000
+    );
+    
+    // Could implement actual logic to:
+    // 1. Calculate hikers within tower range
+    // 2. Update their connection status
+    // 3. Show visual indicators on the map
+  }
+
+  /**
+   * Handle tower view coverage action
+   * @param {string} towerId - The ID of the tower
+   */
+  handleTowerViewCoverage(towerId) {
+    console.log(`Viewing coverage for tower ${towerId}`);
+    
+    // This would show the coverage area on the map
+    // Placeholder for actual coverage visualization
+    this.settings.showNotification(
+      `Showing coverage area for tower ${towerId}`,
+      3000
+    );
+    
+    // Could implement:
+    // 1. Draw coverage circle on map
+    // 2. Highlight hikers within/outside coverage
+    // 3. Show coverage statistics
+  }
+
+  /**
+   * Handle tower node click (similar to hiker click)
+   * @param {Object} tower - The tower object
+   */
+  handleTowerClick(tower) {
+    console.log('Tower clicked:', tower);
+    
+    // Ensure tower has required properties
+    if (!tower || !tower.id) {
+      console.error('Invalid tower object:', tower);
+      return;
+    }
+    
+    // Open the tower modal with tower data
+    this.towerModal.openModal(tower);
+  }
+
+  /**
    * Update marker style for a hiker (e.g., for handled SOS)
    * @param {Object} hiker - The hiker to update
    */
@@ -23292,10 +24907,16 @@ class HikerTrackingApp {
     });
     
     // Update the map - this recreates all markers if needed
-    this.map.updateMap(this.hikers, (hiker) => this.handleHikerClick(hiker));
+    this.map.updateMap(
+      this.hikers, 
+      (hiker) => this.handleHikerClick(hiker),
+      this.towers,
+      (tower) => this.handleTowerClick(tower)
+    );
     
     // Update the sidebar
     this.sidebar.updateSidebar(this.hikers);
+    this.sidebar.updateTowerList(this.towers);
     
     // Update safety status if module is initialized
     if (this.trackSafetyModule) {

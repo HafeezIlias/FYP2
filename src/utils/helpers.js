@@ -84,4 +84,38 @@ export function createSampleHikers(count = 10, centerCoords = [3.139, 101.6869])
       return new Hiker(index, name, lat, lon, 'Active', battery);
     });
   });
+}
+
+/**
+ * Create sample tower/basecamp data for testing
+ * @param {number} count - Number of towers to create (default 3)
+ * @param {Array} centerCoords - [lat, lon] center coordinates
+ * @returns {Promise<Array>} Promise resolving to array of Tower objects
+ */
+export function createSampleTowers(count = 3, centerCoords = [3.139, 101.6869]) {
+  const towerNames = [
+    'Central Tower', 'North Base', 'South Station', 'East Point', 'West Camp',
+    'Peak Tower', 'Valley Base', 'Ridge Station', 'Summit Point', 'Forest Camp'
+  ];
+  
+  const types = ['Tower', 'Basecamp'];
+  const statuses = ['Active', 'Maintenance', 'Offline'];
+  
+  // Import Tower model dynamically to avoid circular dependency
+  return import('../models/Tower.js').then(({ default: Tower }) => {
+    return towerNames.slice(0, count).map((name, index) => {
+      // Create towers with more spread out positions than hikers
+      const lat = centerCoords[0] + (Math.random() - 0.5) * 0.1;
+      const lon = centerCoords[1] + (Math.random() - 0.5) * 0.1;
+      const type = types[Math.floor(Math.random() * types.length)];
+      const status = statuses[Math.floor(Math.random() * statuses.length)];
+      const signalStrength = 60 + Math.random() * 40; // 60-100%
+      
+      const options = {
+        coverageRange: Math.round(300 + Math.random() * 400), // Optional: 300-700m
+      };
+      
+      return new Tower(`tower_${index}`, name, lat, lon, type, status, signalStrength, options);
+    });
+  });
 } 

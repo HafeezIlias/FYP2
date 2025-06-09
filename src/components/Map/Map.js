@@ -12,6 +12,7 @@ class MapComponent {
     this.map = null;
     this.markerLayer = null;
     this.hikerMarkers = {};
+    this.towerMarkers = {};
     this.trackingHikerId = null;
     this.containerId = containerId;
     this.initialCenter = initialCenter;
@@ -108,6 +109,46 @@ class MapComponent {
   }
 
   /**
+   * Create a custom marker for a tower/basecamp
+   * @param {Object} tower - The tower object
+   * @returns {Object} Leaflet divIcon
+   */
+  createTowerMarkerIcon(tower) {
+    const typeClass = tower.type.toLowerCase();
+    const statusClass = tower.status.toLowerCase();
+    
+    // Choose icon based on type
+    const iconClass = tower.type === 'Tower' ? 'fa-broadcast-tower' : 'fa-campground';
+    
+    // Status indicator
+    let statusIndicator = '';
+    if (tower.status === 'Offline') {
+      statusIndicator = '<i class="fas fa-times-circle tower-status-icon offline"></i>';
+    } else if (tower.status === 'Maintenance') {
+      statusIndicator = '<i class="fas fa-wrench tower-status-icon maintenance"></i>';
+    } else {
+      statusIndicator = '<i class="fas fa-check-circle tower-status-icon active"></i>';
+    }
+    
+    const markerHtml = `
+      <div class="tower-marker-label ${typeClass} ${statusClass}">
+        ${tower.name}
+        ${statusIndicator}
+      </div>
+      <div class="tower-marker ${typeClass} ${statusClass}">
+        <i class="fas ${iconClass}"></i>
+      </div>
+    `;
+    
+    return L.divIcon({
+      html: markerHtml,
+      className: 'tower-marker-container',
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
+    });
+  }
+
+  /**
    * Center the map on a specific hiker
    * @param {string|number} hikerId - The ID of the hiker to center on
    */
@@ -191,11 +232,13 @@ class MapComponent {
   }
 
   /**
-   * Update the map with current hiker data
+   * Update the map with current hiker and tower data
    * @param {Array} hikers - Array of hiker objects
-   * @param {Function} onMarkerClick - Callback for marker click events
+   * @param {Function} onHikerClick - Callback for hiker marker click events
+   * @param {Array} towers - Array of tower objects
+   * @param {Function} onTowerClick - Callback for tower marker click events
    */
-  updateMap(hikers, onMarkerClick) {
+  updateMap(hikers, onHikerClick, towers = [], onTowerClick = null) {
     if (!this.map || !this.markerLayer) {
       console.error('Map not initialized');
       return;
@@ -243,8 +286,8 @@ class MapComponent {
             zIndexOffset: hiker.sos ? 1000 : 0 // SOS markers on top
           }).addTo(this.markerLayer);
           
-          if (onMarkerClick) {
-            marker.on('click', () => onMarkerClick(hiker));
+          if (onHikerClick) {
+            marker.on('click', () => onHikerClick(hiker));
           }
           
           this.hikerMarkers[hiker.id] = marker;
@@ -259,6 +302,58 @@ class MapComponent {
       if (!currentHikerIds.has(Number(hikerId)) && !currentHikerIds.has(hikerId)) {
         this.markerLayer.removeLayer(this.hikerMarkers[hikerId]);
         delete this.hikerMarkers[hikerId];
+      }
+    });
+
+    // Handle tower markers
+    const currentTowerIds = new Set();
+    
+    towers.forEach(tower => {
+      // Ensure lat and lon are valid numbers
+      const lat = parseFloat(tower.lat);
+      const lon = parseFloat(tower.lon);
+      
+      // Skip invalid coordinates
+      if (isNaN(lat) || isNaN(lon)) {
+        console.warn(`Invalid coordinates for tower ${tower.id}:`, tower.lat, tower.lon);
+        return;
+      }
+      
+      currentTowerIds.add(tower.id);
+      
+      // Check if marker already exists
+      const existingMarker = this.towerMarkers[tower.id];
+      
+      if (existingMarker) {
+        // Update existing marker position and icon
+        existingMarker.setLatLng([lat, lon]);
+        existingMarker.setIcon(this.createTowerMarkerIcon(tower));
+      } else {
+        // Create new marker
+        console.log(`Creating tower marker for ${tower.id} at ${lat},${lon}`);
+        
+        try {
+          const marker = L.marker([lat, lon], {
+            icon: this.createTowerMarkerIcon(tower),
+            zIndexOffset: 500 // Towers above hikers but below SOS
+          }).addTo(this.markerLayer);
+          
+          if (onTowerClick) {
+            marker.on('click', () => onTowerClick(tower));
+          }
+          
+          this.towerMarkers[tower.id] = marker;
+        } catch (error) {
+          console.error(`Error creating marker for tower ${tower.id}:`, error);
+        }
+      }
+    });
+    
+    // Remove markers for towers that no longer exist
+    Object.keys(this.towerMarkers).forEach(towerId => {
+      if (!currentTowerIds.has(towerId)) {
+        this.markerLayer.removeLayer(this.towerMarkers[towerId]);
+        delete this.towerMarkers[towerId];
       }
     });
     

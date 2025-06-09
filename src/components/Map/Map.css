@@ -159,4 +159,150 @@
   100% {
     box-shadow: 0 0 0 0 rgba(245, 101, 101, 0);
   }
+}
+
+/* Tower Marker Styles */
+.tower-marker-container {
+  position: relative;
+}
+
+.tower-marker {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px;
+  border: 2px solid white;
+  box-shadow: 0 0 0 2px #667eea, 0 0 15px rgba(102, 126, 234, 0.4);
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  z-index: 2;
+  transition: all 0.3s ease;
+}
+
+.tower-marker:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 0 2px #667eea, 0 0 20px rgba(102, 126, 234, 0.6);
+}
+
+.tower-marker i {
+  color: white;
+  font-size: 12px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Tower type specific styles */
+.tower-marker.tower {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  box-shadow: 0 0 0 2px #4facfe, 0 0 15px rgba(79, 172, 254, 0.4);
+}
+
+.tower-marker.basecamp {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  box-shadow: 0 0 0 2px #43e97b, 0 0 15px rgba(67, 233, 123, 0.4);
+}
+
+/* Tower status styles */
+.tower-marker.offline {
+  background: linear-gradient(135deg, #f56565 0%, #ff4757 100%);
+  box-shadow: 0 0 0 2px #f56565, 0 0 15px rgba(245, 101, 101, 0.4);
+}
+
+.tower-marker.maintenance {
+  background: linear-gradient(135deg, #ffa726 0%, #ff9800 100%);
+  box-shadow: 0 0 0 2px #ffa726, 0 0 15px rgba(255, 167, 38, 0.4);
+}
+
+/* Tower marker label */
+.tower-marker-label {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 15px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  z-index: 3;
+  min-width: 90px;
+  text-align: center;
+  transition: all 0.2s ease;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.tower-marker-label:after {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 7px solid #667eea;
+}
+
+/* Tower type specific label styles */
+.tower-marker-label.tower {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.tower-marker-label.tower:after {
+  border-top-color: #4facfe;
+}
+
+.tower-marker-label.basecamp {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.tower-marker-label.basecamp:after {
+  border-top-color: #43e97b;
+}
+
+/* Tower status specific label styles */
+.tower-marker-label.offline {
+  background: linear-gradient(135deg, #f56565 0%, #ff4757 100%);
+}
+
+.tower-marker-label.offline:after {
+  border-top-color: #f56565;
+}
+
+.tower-marker-label.maintenance {
+  background: linear-gradient(135deg, #ffa726 0%, #ff9800 100%);
+}
+
+.tower-marker-label.maintenance:after {
+  border-top-color: #ffa726;
+}
+
+/* Tower status icons */
+.tower-status-icon {
+  font-size: 9px;
+  margin-left: 3px;
+}
+
+.tower-status-icon.active {
+  color: #48bb78;
+}
+
+.tower-status-icon.maintenance {
+  color: #ed8936;
+}
+
+.tower-status-icon.offline {
+  color: #f56565;
 } 

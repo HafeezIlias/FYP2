@@ -1,0 +1,295 @@
+/* Tower Modal Component Styles - Matching Hiker Modal */
+.tower-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.tower-modal.active {
+  display: flex;
+}
+
+.tower-modal .modal-content {
+  background-color: #ffffff;
+  border-radius: 12px;
+  max-width: 90%;
+  width: 500px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  animation: modalFadeIn 0.3s;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tower-modal .modal-header {
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.tower-modal .modal-header h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #2d3748;
+  display: flex;
+  align-items: center;
+}
+
+.tower-modal .modal-header h3 i {
+  margin-right: 10px;
+  font-size: 18px;
+  color: #4299e1;
+}
+
+.tower-modal .close-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #a0aec0;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.tower-modal .close-btn:hover {
+  color: #4a5568;
+}
+
+.tower-modal .modal-body {
+  padding: 24px;
+}
+
+.tower-detail {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.tower-detail .detail-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #f7fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 15px;
+}
+
+.tower-detail .detail-icon i {
+  font-size: 16px;
+  color: #4299e1;
+}
+
+.tower-detail .detail-info {
+  flex: 1;
+}
+
+.tower-detail .detail-label {
+  display: block;
+  font-size: 13px;
+  color: #718096;
+  margin-bottom: 4px;
+}
+
+.tower-detail .detail-value {
+  font-size: 15px;
+  font-weight: 500;
+  color: #2d3748;
+  transition: all 0.3s;
+}
+
+.tower-detail .detail-value.updating {
+  color: #4299e1;
+}
+
+/* Signal strength bar */
+.signal-bar-container {
+  margin-top: 8px;
+  background-color: #edf2f7;
+  border-radius: 4px;
+  height: 6px;
+  overflow: hidden;
+}
+
+.signal-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.signal-bar.updating {
+  animation: signalPulse 0.5s ease-in-out;
+}
+
+@keyframes signalPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Editable name styling for tower */
+.tower-editable-name {
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  outline: none;
+  background: transparent;
+}
+
+.tower-editable-name:hover {
+  background-color: #f7fafc;
+}
+
+.tower-editable-name:focus {
+  background-color: #edf2f7;
+  color: #2d3748;
+}
+
+/* Tower Modal Actions */
+.tower-modal .modal-actions {
+  padding: 0 24px 24px;
+  display: flex;
+  gap: 12px;
+}
+
+.tower-modal .action-btn {
+  flex: 1;
+  padding: 12px 0;
+  border-radius: 8px;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+}
+
+.tower-modal .primary-btn {
+  background: #4299e1;
+  color: white;
+}
+
+.tower-modal .primary-btn:hover {
+  background: #3182ce;
+}
+
+.tower-modal .action-btn:not(.primary-btn) {
+  background: #edf2f7;
+  color: #4a5568;
+}
+
+.tower-modal .action-btn:not(.primary-btn):hover {
+  background: #e2e8f0;
+}
+
+/* Live update indicator for tower modal */
+.tower-modal .update-indicator {
+  display: flex;
+  align-items: center;
+  margin-left: 10px;
+  font-size: 12px;
+  color: #48bb78;
+}
+
+.tower-modal .update-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #48bb78;
+  margin-right: 6px;
+  animation: pulseBlink 1.5s infinite;
+}
+
+@keyframes pulseBlink {
+  0% { opacity: 1; }
+  50% { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+
+/* Tower Toast Notifications */
+.tower-toast {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 15px 20px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  z-index: 10000;
+  animation: towerToastSlideIn 0.3s ease-out;
+  max-width: 350px;
+}
+
+.tower-toast.error {
+  background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+}
+
+.tower-toast i {
+  font-size: 16px;
+}
+
+@keyframes towerToastSlideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Status indicators */
+.tower-status-active {
+  color: #48bb78 !important;
+}
+
+.tower-status-maintenance {
+  color: #ed8936 !important;
+}
+
+.tower-status-offline {
+  color: #f56565 !important;
+}
+
+/* Type-specific styling */
+.tower-type-tower {
+  color: #4299e1 !important;
+}
+
+.tower-type-basecamp {
+  color: #48bb78 !important;
+}
+
+/* Coverage range styling */
+.coverage-range {
+  font-family: 'Courier New', monospace;
+  background: #f7fafc;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+} 

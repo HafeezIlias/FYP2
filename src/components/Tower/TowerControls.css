@@ -1,0 +1,171 @@
+/* Tower Controls Styles */
+
+/* Floating Add Tower Button */
+.floating-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.floating-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+}
+
+.floating-btn.active {
+  background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+  box-shadow: 0 4px 20px rgba(245, 101, 101, 0.4);
+}
+
+.floating-btn.active:hover {
+  box-shadow: 0 8px 25px rgba(245, 101, 101, 0.6);
+}
+
+.floating-btn i {
+  color: white;
+  font-size: 20px;
+  transition: transform 0.2s ease;
+}
+
+.floating-btn:hover i {
+  transform: scale(1.1);
+}
+
+.floating-btn.active i {
+  transform: rotate(45deg);
+}
+
+/* Button Tooltip */
+.btn-tooltip {
+  position: absolute;
+  right: 70px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  pointer-events: none;
+  z-index: 1001;
+}
+
+.btn-tooltip::before {
+  content: '';
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid rgba(0, 0, 0, 0.8);
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+}
+
+.floating-btn:hover .btn-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Animation keyframes */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Tower Creation Dialog Animations */
+.tower-creation-backdrop {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.tower-creation-dialog {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Form Styling Enhancements */
+.tower-creation-dialog input:focus,
+.tower-creation-dialog select:focus {
+  border-color: #667eea !important;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.tower-creation-dialog button:hover {
+  transform: translateY(-1px);
+}
+
+.tower-creation-dialog button[type="submit"]:hover {
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
+}
+
+.tower-creation-dialog button[type="button"]:hover {
+  background: #f7fafc !important;
+  border-color: #cbd5e0 !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .floating-btn {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .floating-btn i {
+    font-size: 18px;
+  }
+  
+  .btn-tooltip {
+    right: 60px;
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+  
+  .tower-creation-dialog {
+    margin: 20px;
+    padding: 20px;
+  }
+} 
