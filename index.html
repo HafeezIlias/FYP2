@@ -41,7 +41,7 @@
             <i class="fas fa-user-friends"></i> Hikers
           </button>
           <button class="filter-tab" data-filter="towers">
-            <i class="fas fa-broadcast-tower"></i> Towers
+            <i data-lucide="radio-tower"></i> Towers
           </button>
         </div>
       </div>
@@ -61,7 +61,7 @@
           </div>
         </div>
         <div class="stat-card towers-stat" style="display: none;">
-          <div class="stat-icon"><i class="fas fa-broadcast-tower"></i></div>
+          <div class="stat-icon"><i data-lucide="radio-tower"></i></div>
           <div class="stat-info">
             <span id="total-towers">0</span>
             <span>Towers</span>
@@ -156,7 +156,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h3>
-            <i class="fas fa-broadcast-tower"></i>
+            <i data-lucide="radio-tower"></i>
             <span id="tower-modal-name" class="tower-editable-name" contenteditable="true" title="Click to edit name">Tower Node</span>
           </h3>
           <button class="close-btn"><i class="fas fa-times"></i></button>
@@ -368,10 +368,15 @@
   
   <!-- Initialize Lucide Icons -->
   <script>
-    // Initialize Lucide icons after the page loads
+    // Initialize Lucide icons after the page loads and after any DOM changes
     document.addEventListener('DOMContentLoaded', function() {
       if (typeof lucide !== 'undefined') {
         lucide.createIcons();
+        
+        // Re-initialize icons periodically to catch dynamically added content
+        setInterval(() => {
+          lucide.createIcons();
+        }, 1000);
       }
     });
   </script>
