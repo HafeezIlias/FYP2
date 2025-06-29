@@ -21764,7 +21764,7 @@ class TowerControls {
       height: 56px;
       border-radius: 50%;
       border: none;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #4299E1;
       color: white;
       font-size: 20px;
       cursor: pointer;
@@ -21887,13 +21887,17 @@ class TowerControls {
           <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #4a5568;">Location:</label>
           <div class="coordinate-method-toggle" style="display: flex; background: #f7fafc; border-radius: 8px; padding: 4px; margin-bottom: 12px;">
             <button type="button" id="map-select-mode" class="coord-method-btn ${hasInitialCoords ? 'active' : ''}" 
-                    style="flex: 1; padding: 8px 12px; border: none; background: ${hasInitialCoords ? '#667eea' : 'transparent'}; 
-                           color: ${hasInitialCoords ? 'white' : '#4a5568'}; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;">
+                    style="flex: 1; padding: 8px 12px; border: none; background: ${hasInitialCoords ? '#4299E1' : 'transparent'}; 
+                           color: ${hasInitialCoords ? 'white' : '#4a5568'}; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;"
+                    onmouseover="if(!this.classList.contains('coord-active')) { this.style.background='#e2e8f0'; }"
+                    onmouseout="if(!this.classList.contains('coord-active')) { this.style.background='transparent'; }">
               <i class="fas fa-map-marker-alt"></i> Select on Map
             </button>
             <button type="button" id="manual-input-mode" class="coord-method-btn ${!hasInitialCoords ? 'active' : ''}"
-                    style="flex: 1; padding: 8px 12px; border: none; background: ${!hasInitialCoords ? '#667eea' : 'transparent'}; 
-                           color: ${!hasInitialCoords ? 'white' : '#4a5568'}; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;">
+                    style="flex: 1; padding: 8px 12px; border: none; background: ${!hasInitialCoords ? '#4299E1' : 'transparent'}; 
+                           color: ${!hasInitialCoords ? 'white' : '#4a5568'}; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;"
+                    onmouseover="if(!this.classList.contains('coord-active')) { this.style.background='#e2e8f0'; }"
+                    onmouseout="if(!this.classList.contains('coord-active')) { this.style.background='transparent'; }">
               <i class="fas fa-keyboard"></i> Manual Input
             </button>
           </div>
@@ -21939,7 +21943,7 @@ class TowerControls {
             Cancel
           </button>
           <button type="submit" 
-                  style="padding: 10px 20px; border: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; font-weight: 500; cursor: pointer;">
+                  style="padding: 10px 20px; border: none; background: #4299E1; color: white; border-radius: 8px; font-weight: 500; cursor: pointer;">
             <i class="fas fa-plus"></i> Create Tower
           </button>
         </div>
@@ -22014,8 +22018,10 @@ class TowerControls {
       // Switch to map selection mode
       mapSelectBtn.style.background = '#667eea';
       mapSelectBtn.style.color = 'white';
+      mapSelectBtn.classList.add('coord-active');
       manualInputBtn.style.background = 'transparent';
       manualInputBtn.style.color = '#4a5568';
+      manualInputBtn.classList.remove('coord-active');
       
       mapDisplay.style.display = 'block';
       manualInput.style.display = 'none';
@@ -22040,8 +22046,10 @@ class TowerControls {
       // Switch to manual input mode
       manualInputBtn.style.background = '#667eea';
       manualInputBtn.style.color = 'white';
+      manualInputBtn.classList.add('coord-active');
       mapSelectBtn.style.background = 'transparent';
       mapSelectBtn.style.color = '#4a5568';
+      mapSelectBtn.classList.remove('coord-active');
       
       mapDisplay.style.display = 'none';
       manualInput.style.display = 'block';
@@ -22151,6 +22159,15 @@ class TowerControls {
         this.disableMapSelectionMode();
       }
     });
+
+    // Set initial active class based on hasInitialCoords
+    if (hasInitialCoords) {
+      mapSelectBtn.classList.add('coord-active');
+      manualInputBtn.classList.remove('coord-active');
+    } else {
+      manualInputBtn.classList.add('coord-active');
+      mapSelectBtn.classList.remove('coord-active');
+    }
 
     // If starting in map selection mode and coordinates are provided
     if (hasInitialCoords && mapDisplay.style.display !== 'none') {
