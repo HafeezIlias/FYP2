@@ -117,17 +117,17 @@ class MapComponent {
     const typeClass = tower.type.toLowerCase();
     const statusClass = tower.status.toLowerCase();
     
-    // Choose icon based on type
-    const iconClass = tower.type === 'Tower' ? 'fa-broadcast-tower' : 'fa-campground';
+    // Choose Lucide icon based on type
+    const lucideIcon = tower.type === 'Tower' ? 'radio-tower' : 'house-wifi';
     
-    // Status indicator
+    // Status indicator using Lucide icons
     let statusIndicator = '';
     if (tower.status === 'Offline') {
-      statusIndicator = '<i class="fas fa-times-circle tower-status-icon offline"></i>';
+      statusIndicator = '<i data-lucide="x-circle" class="tower-status-icon offline"></i>';
     } else if (tower.status === 'Maintenance') {
-      statusIndicator = '<i class="fas fa-wrench tower-status-icon maintenance"></i>';
+      statusIndicator = '<i data-lucide="wrench" class="tower-status-icon maintenance"></i>';
     } else {
-      statusIndicator = '<i class="fas fa-check-circle tower-status-icon active"></i>';
+      statusIndicator = '<i data-lucide="check-circle" class="tower-status-icon active"></i>';
     }
     
     const markerHtml = `
@@ -135,17 +135,26 @@ class MapComponent {
         ${tower.name}
         ${statusIndicator}
       </div>
-      <div class="tower-marker ${typeClass} ${statusClass}">
-        <i class="fas ${iconClass}"></i>
+      <div class="tower-marker-icon ${typeClass} ${statusClass}">
+        <i data-lucide="${lucideIcon}" class="tower-main-icon"></i>
       </div>
     `;
     
-    return L.divIcon({
+    const divIcon = L.divIcon({
       html: markerHtml,
       className: 'tower-marker-container',
-      iconSize: [20, 20],
-      iconAnchor: [10, 10]
+      iconSize: [24, 24],
+      iconAnchor: [12, 12]
     });
+    
+    // Schedule Lucide icon refresh after a short delay
+    setTimeout(() => {
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
+    }, 100);
+    
+    return divIcon;
   }
 
   /**

@@ -18779,17 +18779,17 @@ class MapComponent {
     const typeClass = tower.type.toLowerCase();
     const statusClass = tower.status.toLowerCase();
     
-    // Choose icon based on type
-    const iconClass = tower.type === 'Tower' ? 'fa-broadcast-tower' : 'fa-campground';
+    // Choose Lucide icon based on type
+    const lucideIcon = tower.type === 'Tower' ? 'radio-tower' : 'house-wifi';
     
-    // Status indicator
+    // Status indicator using Lucide icons
     let statusIndicator = '';
     if (tower.status === 'Offline') {
-      statusIndicator = '<i class="fas fa-times-circle tower-status-icon offline"></i>';
+      statusIndicator = '<i data-lucide="x-circle" class="tower-status-icon offline"></i>';
     } else if (tower.status === 'Maintenance') {
-      statusIndicator = '<i class="fas fa-wrench tower-status-icon maintenance"></i>';
+      statusIndicator = '<i data-lucide="wrench" class="tower-status-icon maintenance"></i>';
     } else {
-      statusIndicator = '<i class="fas fa-check-circle tower-status-icon active"></i>';
+      statusIndicator = '<i data-lucide="check-circle" class="tower-status-icon active"></i>';
     }
     
     const markerHtml = `
@@ -18797,17 +18797,26 @@ class MapComponent {
         ${tower.name}
         ${statusIndicator}
       </div>
-      <div class="tower-marker ${typeClass} ${statusClass}">
-        <i class="fas ${iconClass}"></i>
+      <div class="tower-marker-icon ${typeClass} ${statusClass}">
+        <i data-lucide="${lucideIcon}" class="tower-main-icon"></i>
       </div>
     `;
     
-    return L.divIcon({
+    const divIcon = L.divIcon({
       html: markerHtml,
       className: 'tower-marker-container',
-      iconSize: [20, 20],
-      iconAnchor: [10, 10]
+      iconSize: [24, 24],
+      iconAnchor: [12, 12]
     });
+    
+    // Schedule Lucide icon refresh after a short delay
+    setTimeout(() => {
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
+    }, 100);
+    
+    return divIcon;
   }
 
   /**
@@ -24683,12 +24692,16 @@ async function updateNodeName(nodeId, name) {
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createLucideIcon: () => (/* binding */ createLucideIcon),
 /* harmony export */   createSampleHikers: () => (/* binding */ createSampleHikers),
 /* harmony export */   createSampleTowers: () => (/* binding */ createSampleTowers),
 /* harmony export */   flashUpdate: () => (/* binding */ flashUpdate),
 /* harmony export */   formatTimeAgo: () => (/* binding */ formatTimeAgo),
 /* harmony export */   getBatteryColor: () => (/* binding */ getBatteryColor),
-/* harmony export */   getStatusIcon: () => (/* binding */ getStatusIcon)
+/* harmony export */   getStatusIcon: () => (/* binding */ getStatusIcon),
+/* harmony export */   getStatusLucideIcon: () => (/* binding */ getStatusLucideIcon),
+/* harmony export */   getTowerIcon: () => (/* binding */ getTowerIcon),
+/* harmony export */   refreshLucideIcons: () => (/* binding */ refreshLucideIcons)
 /* harmony export */ });
 /**
  * Utility functions for the dashboard
@@ -24810,6 +24823,69 @@ function createSampleTowers(count = 3, centerCoords = [3.139, 101.6869]) {
       return new Tower(`tower_${index}`, name, lat, lon, type, status, coverageRadius, options);
     });
   });
+}
+
+/**
+ * Create a Lucide icon element
+ * @param {string} iconName - The name of the Lucide icon
+ * @param {Object} options - Options for the icon (size, color, strokeWidth, etc.)
+ * @returns {string} HTML string for the icon
+ */
+function createLucideIcon(iconName, options = {}) {
+  const {
+    size = 20,
+    color = 'currentColor',
+    strokeWidth = 2,
+    className = '',
+    style = ''
+  } = options;
+  
+  const styleString = `color: ${color}; width: ${size}px; height: ${size}px; stroke-width: ${strokeWidth}; ${style}`;
+  
+  return `<i data-lucide="${iconName}" class="${className}" style="${styleString}"></i>`;
+}
+
+/**
+ * Refresh Lucide icons after DOM changes
+ * @param {HTMLElement} container - Optional container to refresh icons within
+ */
+function refreshLucideIcons(container = document) {
+  if (typeof lucide !== 'undefined') {
+    if (container === document) {
+      lucide.createIcons();
+    } else {
+      // Create icons only within the specified container
+      const icons = container.querySelectorAll('[data-lucide]');
+      icons.forEach(icon => {
+        if (!icon.querySelector('svg')) {
+          lucide.createIcons([icon]);
+        }
+      });
+    }
+  }
+}
+
+/**
+ * Get Lucide icon name for tower/infrastructure type
+ * @param {string} type - Tower type ('Tower' or 'Basecamp')
+ * @returns {string} Lucide icon name
+ */
+function getTowerIcon(type) {
+  return type === 'Tower' ? 'radio-tower' : 'house-wifi';
+}
+
+/**
+ * Get Lucide icon name for status
+ * @param {string} status - Status ('Active', 'Offline', 'Maintenance')
+ * @returns {string} Lucide icon name
+ */
+function getStatusLucideIcon(status) {
+  switch(status) {
+    case 'Active': return 'check-circle';
+    case 'Offline': return 'x-circle';
+    case 'Maintenance': return 'wrench';
+    default: return 'circle';
+  }
 } 
 
 /***/ }),
@@ -24823,6 +24899,7 @@ function createSampleTowers(count = 3, centerCoords = [3.139, 101.6869]) {
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   TrackSafetyManager: () => (/* reexport safe */ _TrackSafetyManager_js__WEBPACK_IMPORTED_MODULE_2__["default"]),
+/* harmony export */   createLucideIcon: () => (/* reexport safe */ _helpers_js__WEBPACK_IMPORTED_MODULE_0__.createLucideIcon),
 /* harmony export */   createSampleHikers: () => (/* reexport safe */ _helpers_js__WEBPACK_IMPORTED_MODULE_0__.createSampleHikers),
 /* harmony export */   createSampleTowers: () => (/* reexport safe */ _helpers_js__WEBPACK_IMPORTED_MODULE_0__.createSampleTowers),
 /* harmony export */   fetchHikersFromFirebase: () => (/* reexport safe */ _firebase_js__WEBPACK_IMPORTED_MODULE_1__.fetchHikersFromFirebase),
@@ -24830,7 +24907,10 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   formatTimeAgo: () => (/* reexport safe */ _helpers_js__WEBPACK_IMPORTED_MODULE_0__.formatTimeAgo),
 /* harmony export */   getBatteryColor: () => (/* reexport safe */ _helpers_js__WEBPACK_IMPORTED_MODULE_0__.getBatteryColor),
 /* harmony export */   getStatusIcon: () => (/* reexport safe */ _helpers_js__WEBPACK_IMPORTED_MODULE_0__.getStatusIcon),
+/* harmony export */   getStatusLucideIcon: () => (/* reexport safe */ _helpers_js__WEBPACK_IMPORTED_MODULE_0__.getStatusLucideIcon),
+/* harmony export */   getTowerIcon: () => (/* reexport safe */ _helpers_js__WEBPACK_IMPORTED_MODULE_0__.getTowerIcon),
 /* harmony export */   listenForHikersUpdates: () => (/* reexport safe */ _firebase_js__WEBPACK_IMPORTED_MODULE_1__.listenForHikersUpdates),
+/* harmony export */   refreshLucideIcons: () => (/* reexport safe */ _helpers_js__WEBPACK_IMPORTED_MODULE_0__.refreshLucideIcons),
 /* harmony export */   updateHikerActiveStatus: () => (/* reexport safe */ _firebase_js__WEBPACK_IMPORTED_MODULE_1__.updateHikerActiveStatus),
 /* harmony export */   updateHikerData: () => (/* reexport safe */ _firebase_js__WEBPACK_IMPORTED_MODULE_1__.updateHikerData),
 /* harmony export */   updateHikerSosStatus: () => (/* reexport safe */ _firebase_js__WEBPACK_IMPORTED_MODULE_1__.updateHikerSosStatus),

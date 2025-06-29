@@ -118,4 +118,67 @@ export function createSampleTowers(count = 3, centerCoords = [3.139, 101.6869]) 
       return new Tower(`tower_${index}`, name, lat, lon, type, status, coverageRadius, options);
     });
   });
+}
+
+/**
+ * Create a Lucide icon element
+ * @param {string} iconName - The name of the Lucide icon
+ * @param {Object} options - Options for the icon (size, color, strokeWidth, etc.)
+ * @returns {string} HTML string for the icon
+ */
+export function createLucideIcon(iconName, options = {}) {
+  const {
+    size = 20,
+    color = 'currentColor',
+    strokeWidth = 2,
+    className = '',
+    style = ''
+  } = options;
+  
+  const styleString = `color: ${color}; width: ${size}px; height: ${size}px; stroke-width: ${strokeWidth}; ${style}`;
+  
+  return `<i data-lucide="${iconName}" class="${className}" style="${styleString}"></i>`;
+}
+
+/**
+ * Refresh Lucide icons after DOM changes
+ * @param {HTMLElement} container - Optional container to refresh icons within
+ */
+export function refreshLucideIcons(container = document) {
+  if (typeof lucide !== 'undefined') {
+    if (container === document) {
+      lucide.createIcons();
+    } else {
+      // Create icons only within the specified container
+      const icons = container.querySelectorAll('[data-lucide]');
+      icons.forEach(icon => {
+        if (!icon.querySelector('svg')) {
+          lucide.createIcons([icon]);
+        }
+      });
+    }
+  }
+}
+
+/**
+ * Get Lucide icon name for tower/infrastructure type
+ * @param {string} type - Tower type ('Tower' or 'Basecamp')
+ * @returns {string} Lucide icon name
+ */
+export function getTowerIcon(type) {
+  return type === 'Tower' ? 'radio-tower' : 'house-wifi';
+}
+
+/**
+ * Get Lucide icon name for status
+ * @param {string} status - Status ('Active', 'Offline', 'Maintenance')
+ * @returns {string} Lucide icon name
+ */
+export function getStatusLucideIcon(status) {
+  switch(status) {
+    case 'Active': return 'check-circle';
+    case 'Offline': return 'x-circle';
+    case 'Maintenance': return 'wrench';
+    default: return 'circle';
+  }
 } 

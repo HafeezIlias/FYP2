@@ -9,6 +9,9 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" >
   
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  
   <!-- Component Styles -->
   <link rel="stylesheet" href="src/styles/main.css" />
   <link rel="stylesheet" href="src/components/Sidebar/Sidebar.css" />
@@ -362,5 +365,15 @@
   
   <!-- Application Script (bundled with webpack) -->
   <script src="dist/bundle.js"></script>
+  
+  <!-- Initialize Lucide Icons -->
+  <script>
+    // Initialize Lucide icons after the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
+    });
+  </script>
 </body>
 </html> 

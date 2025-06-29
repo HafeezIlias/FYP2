@@ -166,52 +166,120 @@
   position: relative;
 }
 
-.tower-marker {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 8px;
-  border: 2px solid white;
-  box-shadow: 0 0 0 2px #667eea, 0 0 15px rgba(102, 126, 234, 0.4);
-  width: 20px;
-  height: 20px;
+.tower-marker-icon {
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto;
   z-index: 2;
   transition: all 0.3s ease;
+  width: 24px;
+  height: 24px;
 }
 
-.tower-marker:hover {
-  transform: scale(1.1);
-  box-shadow: 0 0 0 2px #667eea, 0 0 20px rgba(102, 126, 234, 0.6);
+.tower-marker-icon:hover {
+  transform: scale(1.15);
 }
 
-.tower-marker i {
-  color: white;
-  font-size: 12px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+.tower-marker-icon i {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
-/* Tower type specific styles */
-.tower-marker.tower {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  box-shadow: 0 0 0 2px #4facfe, 0 0 15px rgba(79, 172, 254, 0.4);
+/* Main tower icon styling - white with black border */
+.tower-main-icon {
+  stroke: white !important;
+  fill: white !important;
+  stroke-width: 1.5 !important;
+  width: 22px !important;
+  height: 22px !important;
+  filter: 
+    drop-shadow(-1px -1px 0 black)
+    drop-shadow(1px -1px 0 black)
+    drop-shadow(-1px 1px 0 black)
+    drop-shadow(1px 1px 0 black)
+    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3)) !important;
 }
 
-.tower-marker.basecamp {
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-  box-shadow: 0 0 0 2px #43e97b, 0 0 15px rgba(67, 233, 123, 0.4);
+/* Status-based color variations for main tower icons */
+.tower-marker-icon.offline .tower-main-icon {
+  stroke: #f56565 !important;
+  fill: #f56565 !important;
+  filter: 
+    drop-shadow(-1px -1px 0 black)
+    drop-shadow(1px -1px 0 black)
+    drop-shadow(-1px 1px 0 black)
+    drop-shadow(1px 1px 0 black)
+    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3)) !important;
 }
 
-/* Tower status styles */
-.tower-marker.offline {
-  background: linear-gradient(135deg, #f56565 0%, #ff4757 100%);
-  box-shadow: 0 0 0 2px #f56565, 0 0 15px rgba(245, 101, 101, 0.4);
+.tower-marker-icon.maintenance .tower-main-icon {
+  stroke: #ed8936 !important;
+  fill: #ed8936 !important;
+  filter: 
+    drop-shadow(-1px -1px 0 black)
+    drop-shadow(1px -1px 0 black)
+    drop-shadow(-1px 1px 0 black)
+    drop-shadow(1px 1px 0 black)
+    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3)) !important;
 }
 
-.tower-marker.maintenance {
-  background: linear-gradient(135deg, #ffa726 0%, #ff9800 100%);
-  box-shadow: 0 0 0 2px #ffa726, 0 0 15px rgba(255, 167, 38, 0.4);
+/* Lucide icon specific styling */
+.tower-marker-icon i[data-lucide] {
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2.5;
+  width: 20px;
+  height: 20px;
+}
+
+/* Status-based icon effects for offline/maintenance towers */
+.tower-marker-icon.offline .tower-main-icon {
+  animation: pulse-red 2s infinite;
+}
+
+.tower-marker-icon.maintenance .tower-main-icon {
+  animation: pulse-orange 2s infinite;
+}
+
+@keyframes pulse-red {
+  0%, 100% {
+    filter: 
+      drop-shadow(-1px -1px 0 black)
+      drop-shadow(1px -1px 0 black)
+      drop-shadow(-1px 1px 0 black)
+      drop-shadow(1px 1px 0 black)
+      drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  }
+  50% {
+    filter: 
+      drop-shadow(-1px -1px 0 black)
+      drop-shadow(1px -1px 0 black)
+      drop-shadow(-1px 1px 0 black)
+      drop-shadow(1px 1px 0 black)
+      drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))
+      drop-shadow(0 0 15px rgba(245, 101, 101, 0.9));
+  }
+}
+
+@keyframes pulse-orange {
+  0%, 100% {
+    filter: 
+      drop-shadow(-1px -1px 0 black)
+      drop-shadow(1px -1px 0 black)
+      drop-shadow(-1px 1px 0 black)
+      drop-shadow(1px 1px 0 black)
+      drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  }
+  50% {
+    filter: 
+      drop-shadow(-1px -1px 0 black)
+      drop-shadow(1px -1px 0 black)
+      drop-shadow(-1px 1px 0 black)
+      drop-shadow(1px 1px 0 black)
+      drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))
+      drop-shadow(0 0 15px rgba(237, 137, 54, 0.9));
+  }
 }
 
 /* Tower marker label */
@@ -305,4 +373,13 @@
 
 .tower-status-icon.offline {
   color: #f56565;
+}
+
+/* Lucide status icons */
+.tower-status-icon[data-lucide] {
+  width: 12px;
+  height: 12px;
+  stroke-width: 2.5;
+  stroke: currentColor;
+  fill: none;
 } 
