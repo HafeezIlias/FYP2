@@ -574,7 +574,7 @@ class TowerControls {
       top: 20px;
       left: 50%;
       transform: translateX(-50%);
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #4299E1;
       color: white;
       padding: 12px 20px;
       border-radius: 8px;
