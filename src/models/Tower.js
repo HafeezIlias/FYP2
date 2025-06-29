@@ -89,10 +89,10 @@ class Tower {
 
   /**
    * Get type icon based on tower type
-   * @returns {string} Font Awesome icon class
+   * @returns {string} Lucide icon name
    */
   getTypeIcon() {
-    return this.type === 'Tower' ? 'fa-broadcast-tower' : 'fa-campground';
+    return this.type === 'Tower' ? 'radio-tower' : 'house-wifi';
   }
 
   /**

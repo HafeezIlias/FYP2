@@ -135,7 +135,7 @@ class TowerControls {
 
     dialog.innerHTML = `
       <h3 style="margin: 0 0 20px 0; color: #2d3748; display: flex; align-items: center; gap: 10px;">
-        <i class="fas fa-broadcast-tower"></i>
+        <i data-lucide="radio-tower"></i>
         Add New Infrastructure
       </h3>
       
@@ -151,7 +151,7 @@ class TowerControls {
           <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #4a5568;">Type:</label>
           <select id="tower-type" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
             <option value="Tower">📡 Communication Tower</option>
-            <option value="Basecamp">🏕️ Basecamp Station</option>
+            <option value="Basecamp">🏠 Basecamp Station</option>
           </select>
         </div>
         
@@ -228,6 +228,13 @@ class TowerControls {
 
     backdrop.appendChild(dialog);
     document.body.appendChild(backdrop);
+
+    // Refresh Lucide icons in the dialog
+    setTimeout(() => {
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
+    }, 50);
 
     // Store current coordinates
     let currentLat = lat;

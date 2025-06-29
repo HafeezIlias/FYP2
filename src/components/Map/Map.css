@@ -186,100 +186,16 @@
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
-/* Main tower icon styling - white with black border */
+/* Main tower icon styling - bare Lucide icons */
 .tower-main-icon {
-  stroke: white !important;
-  fill: white !important;
-  stroke-width: 1.5 !important;
   width: 22px !important;
   height: 22px !important;
-  filter: 
-    drop-shadow(-1px -1px 0 black)
-    drop-shadow(1px -1px 0 black)
-    drop-shadow(-1px 1px 0 black)
-    drop-shadow(1px 1px 0 black)
-    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3)) !important;
 }
 
-/* Status-based color variations for main tower icons */
-.tower-marker-icon.offline .tower-main-icon {
-  stroke: #f56565 !important;
-  fill: #f56565 !important;
-  filter: 
-    drop-shadow(-1px -1px 0 black)
-    drop-shadow(1px -1px 0 black)
-    drop-shadow(-1px 1px 0 black)
-    drop-shadow(1px 1px 0 black)
-    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3)) !important;
-}
-
-.tower-marker-icon.maintenance .tower-main-icon {
-  stroke: #ed8936 !important;
-  fill: #ed8936 !important;
-  filter: 
-    drop-shadow(-1px -1px 0 black)
-    drop-shadow(1px -1px 0 black)
-    drop-shadow(-1px 1px 0 black)
-    drop-shadow(1px 1px 0 black)
-    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3)) !important;
-}
-
-/* Lucide icon specific styling */
+/* Lucide icon specific styling - bare icons */
 .tower-marker-icon i[data-lucide] {
-  stroke: currentColor;
-  fill: none;
-  stroke-width: 2.5;
   width: 20px;
   height: 20px;
-}
-
-/* Status-based icon effects for offline/maintenance towers */
-.tower-marker-icon.offline .tower-main-icon {
-  animation: pulse-red 2s infinite;
-}
-
-.tower-marker-icon.maintenance .tower-main-icon {
-  animation: pulse-orange 2s infinite;
-}
-
-@keyframes pulse-red {
-  0%, 100% {
-    filter: 
-      drop-shadow(-1px -1px 0 black)
-      drop-shadow(1px -1px 0 black)
-      drop-shadow(-1px 1px 0 black)
-      drop-shadow(1px 1px 0 black)
-      drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-  }
-  50% {
-    filter: 
-      drop-shadow(-1px -1px 0 black)
-      drop-shadow(1px -1px 0 black)
-      drop-shadow(-1px 1px 0 black)
-      drop-shadow(1px 1px 0 black)
-      drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))
-      drop-shadow(0 0 15px rgba(245, 101, 101, 0.9));
-  }
-}
-
-@keyframes pulse-orange {
-  0%, 100% {
-    filter: 
-      drop-shadow(-1px -1px 0 black)
-      drop-shadow(1px -1px 0 black)
-      drop-shadow(-1px 1px 0 black)
-      drop-shadow(1px 1px 0 black)
-      drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-  }
-  50% {
-    filter: 
-      drop-shadow(-1px -1px 0 black)
-      drop-shadow(1px -1px 0 black)
-      drop-shadow(-1px 1px 0 black)
-      drop-shadow(1px 1px 0 black)
-      drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))
-      drop-shadow(0 0 15px rgba(237, 137, 54, 0.9));
-  }
 }
 
 /* Tower marker label */
@@ -288,7 +204,7 @@
   top: -40px;
   left: 50%;
   transform: translateX(-50%);
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #667eea;
   color: white;
   border-radius: 15px;
   padding: 6px 12px;
@@ -325,7 +241,7 @@
 
 /* Tower type specific label styles */
 .tower-marker-label.tower {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  background: #4facfe;
 }
 
 .tower-marker-label.tower:after {
@@ -333,7 +249,7 @@
 }
 
 .tower-marker-label.basecamp {
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  background: #43e97b;
 }
 
 .tower-marker-label.basecamp:after {
@@ -342,7 +258,7 @@
 
 /* Tower status specific label styles */
 .tower-marker-label.offline {
-  background: linear-gradient(135deg, #f56565 0%, #ff4757 100%);
+  background: #f56565;
 }
 
 .tower-marker-label.offline:after {
@@ -350,7 +266,7 @@
 }
 
 .tower-marker-label.maintenance {
-  background: linear-gradient(135deg, #ffa726 0%, #ff9800 100%);
+  background: #ffa726;
 }
 
 .tower-marker-label.maintenance:after {

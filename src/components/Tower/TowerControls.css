@@ -5,7 +5,7 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #667eea;
   border: none;
   box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
   cursor: pointer;
@@ -23,7 +23,7 @@
 }
 
 .floating-btn.active {
-  background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+  background: #f56565;
   box-shadow: 0 4px 20px rgba(245, 101, 101, 0.4);
 }
 
@@ -139,7 +139,7 @@
 }
 
 .tower-creation-dialog button[type="submit"]:hover {
-  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
+  background: #5a67d8 !important;
 }
 
 .tower-creation-dialog button[type="button"]:hover {

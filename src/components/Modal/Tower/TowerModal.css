@@ -231,7 +231,7 @@
   position: fixed;
   top: 80px;
   right: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #667eea;
   color: white;
   padding: 15px 20px;
   border-radius: 10px;
@@ -245,7 +245,7 @@
 }
 
 .tower-toast.error {
-  background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+  background: #ff416c;
 }
 
 .tower-toast i {
@@ -292,4 +292,14 @@
   padding: 2px 8px;
   border-radius: 6px;
   border: 1px solid #e2e8f0;
+}
+
+/* Lucide icon styling - bare icons only */
+.tower-modal i[data-lucide] {
+  /* Default Lucide styling */
+}
+
+.tower-modal .modal-header h3 i[data-lucide] {
+  width: 18px;
+  height: 18px;
 } 

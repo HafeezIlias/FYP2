@@ -178,25 +178,25 @@ class SidebarComponent {
     card.className = 'tower-card';
     card.setAttribute('data-tower-id', tower.id);
     
-    const typeIcon = tower.type === 'Tower' ? 'fa-broadcast-tower' : 'fa-campground';
+    const typeIcon = tower.type === 'Tower' ? 'radio-tower' : 'house-wifi';
     const typeClass = tower.type.toLowerCase();
     
     card.innerHTML = `
       <div class="tower-info">
         <div class="tower-icon ${typeClass}">
-          <i class="fas ${typeIcon}"></i>
+          <i data-lucide="${typeIcon}"></i>
         </div>
         <div class="tower-name-type">
           <div class="tower-name">${tower.name}</div>
           <div class="tower-type">
-            <i class="fas ${typeIcon}"></i>
+            <i data-lucide="${typeIcon}"></i>
             ${tower.type}
           </div>
         </div>
       </div>
       <div class="tower-details">
         <div class="tower-detail-item">
-          <i class="fas fa-wifi"></i>
+          <i data-lucide="wifi"></i>
           ${tower.coverageRadius || tower.signalStrength || 500}m
         </div>
         <div class="tower-status ${tower.status.toLowerCase()}">
@@ -204,6 +204,13 @@ class SidebarComponent {
         </div>
       </div>
     `;
+    
+    // Refresh Lucide icons for this card
+    setTimeout(() => {
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
+    }, 10);
     
     if (this.onTowerClick) {
       card.addEventListener('click', () => {

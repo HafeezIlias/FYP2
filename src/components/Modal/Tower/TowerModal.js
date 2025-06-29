@@ -182,6 +182,17 @@ class TowerModalComponent {
       timestamp: new Date(tower.lastUpdate).toLocaleTimeString()
     });
     
+    // Update header icon based on tower type
+    const headerIcon = document.querySelector(`#${this.modalId} .modal-header h3 i[data-lucide]`);
+    if (headerIcon) {
+      const iconName = tower.type === 'Tower' ? 'radio-tower' : 'house-wifi';
+      headerIcon.setAttribute('data-lucide', iconName);
+      // Refresh this specific icon
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons([headerIcon]);
+      }
+    }
+    
     // Update all content
     document.getElementById(this.nameId).textContent = tower.name || `${tower.type} ${tower.id}`;
     document.getElementById(this.typeId).textContent = tower.type || 'Tower';

@@ -19674,6 +19674,17 @@ class TowerModalComponent {
       timestamp: new Date(tower.lastUpdate).toLocaleTimeString()
     });
     
+    // Update header icon based on tower type
+    const headerIcon = document.querySelector(`#${this.modalId} .modal-header h3 i[data-lucide]`);
+    if (headerIcon) {
+      const iconName = tower.type === 'Tower' ? 'radio-tower' : 'house-wifi';
+      headerIcon.setAttribute('data-lucide', iconName);
+      // Refresh this specific icon
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons([headerIcon]);
+      }
+    }
+    
     // Update all content
     document.getElementById(this.nameId).textContent = tower.name || `${tower.type} ${tower.id}`;
     document.getElementById(this.typeId).textContent = tower.type || 'Tower';
@@ -21430,25 +21441,25 @@ class SidebarComponent {
     card.className = 'tower-card';
     card.setAttribute('data-tower-id', tower.id);
     
-    const typeIcon = tower.type === 'Tower' ? 'fa-broadcast-tower' : 'fa-campground';
+    const typeIcon = tower.type === 'Tower' ? 'radio-tower' : 'house-wifi';
     const typeClass = tower.type.toLowerCase();
     
     card.innerHTML = `
       <div class="tower-info">
         <div class="tower-icon ${typeClass}">
-          <i class="fas ${typeIcon}"></i>
+          <i data-lucide="${typeIcon}"></i>
         </div>
         <div class="tower-name-type">
           <div class="tower-name">${tower.name}</div>
           <div class="tower-type">
-            <i class="fas ${typeIcon}"></i>
+            <i data-lucide="${typeIcon}"></i>
             ${tower.type}
           </div>
         </div>
       </div>
       <div class="tower-details">
         <div class="tower-detail-item">
-          <i class="fas fa-wifi"></i>
+          <i data-lucide="wifi"></i>
           ${tower.coverageRadius || tower.signalStrength || 500}m
         </div>
         <div class="tower-status ${tower.status.toLowerCase()}">
@@ -21456,6 +21467,13 @@ class SidebarComponent {
         </div>
       </div>
     `;
+    
+    // Refresh Lucide icons for this card
+    setTimeout(() => {
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
+    }, 10);
     
     if (this.onTowerClick) {
       card.addEventListener('click', () => {
@@ -21837,7 +21855,7 @@ class TowerControls {
 
     dialog.innerHTML = `
       <h3 style="margin: 0 0 20px 0; color: #2d3748; display: flex; align-items: center; gap: 10px;">
-        <i class="fas fa-broadcast-tower"></i>
+        <i data-lucide="radio-tower"></i>
         Add New Infrastructure
       </h3>
       
@@ -21853,7 +21871,7 @@ class TowerControls {
           <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #4a5568;">Type:</label>
           <select id="tower-type" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
             <option value="Tower">📡 Communication Tower</option>
-            <option value="Basecamp">🏕️ Basecamp Station</option>
+            <option value="Basecamp">🏠 Basecamp Station</option>
           </select>
         </div>
         
@@ -21930,6 +21948,13 @@ class TowerControls {
 
     backdrop.appendChild(dialog);
     document.body.appendChild(backdrop);
+
+    // Refresh Lucide icons in the dialog
+    setTimeout(() => {
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
+    }, 50);
 
     // Store current coordinates
     let currentLat = lat;
@@ -22809,10 +22834,10 @@ class Tower {
 
   /**
    * Get type icon based on tower type
-   * @returns {string} Font Awesome icon class
+   * @returns {string} Lucide icon name
    */
   getTypeIcon() {
-    return this.type === 'Tower' ? 'fa-broadcast-tower' : 'fa-campground';
+    return this.type === 'Tower' ? 'radio-tower' : 'house-wifi';
   }
 
   /**
