@@ -44,7 +44,7 @@ class TowerControls {
       height: 56px;
       border-radius: 50%;
       border: none;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #4299E1;
       color: white;
       font-size: 20px;
       cursor: pointer;
@@ -167,12 +167,12 @@ class TowerControls {
           <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #4a5568;">Location:</label>
           <div class="coordinate-method-toggle" style="display: flex; background: #f7fafc; border-radius: 8px; padding: 4px; margin-bottom: 12px;">
             <button type="button" id="map-select-mode" class="coord-method-btn ${hasInitialCoords ? 'active' : ''}" 
-                    style="flex: 1; padding: 8px 12px; border: none; background: ${hasInitialCoords ? '#667eea' : 'transparent'}; 
+                    style="flex: 1; padding: 8px 12px; border: none; background: ${hasInitialCoords ? '#4299E1' : 'transparent'}; 
                            color: ${hasInitialCoords ? 'white' : '#4a5568'}; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;">
               <i class="fas fa-map-marker-alt"></i> Select on Map
             </button>
             <button type="button" id="manual-input-mode" class="coord-method-btn ${!hasInitialCoords ? 'active' : ''}"
-                    style="flex: 1; padding: 8px 12px; border: none; background: ${!hasInitialCoords ? '#667eea' : 'transparent'}; 
+                    style="flex: 1; padding: 8px 12px; border: none; background: ${!hasInitialCoords ? '#4299E1' : 'transparent'}; 
                            color: ${!hasInitialCoords ? 'white' : '#4a5568'}; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;">
               <i class="fas fa-keyboard"></i> Manual Input
             </button>
@@ -219,7 +219,7 @@ class TowerControls {
             Cancel
           </button>
           <button type="submit" 
-                  style="padding: 10px 20px; border: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; font-weight: 500; cursor: pointer;">
+                  style="padding: 10px 20px; border: none; background: #4299E1; color: white; border-radius: 8px; font-weight: 500; cursor: pointer;">
             <i class="fas fa-plus"></i> Create Tower
           </button>
         </div>
