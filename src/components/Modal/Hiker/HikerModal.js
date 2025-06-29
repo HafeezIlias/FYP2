@@ -1,8 +1,7 @@
 /**
  * Modal Component - Handles the hiker detail modal
  */
-import { flashUpdate, getBatteryColor } from '../../utils/helpers.js';
-import { updateNodeName } from '../../utils/firebase.js';
+import { flashUpdate, getBatteryColor, updateNodeName } from '../../../utils/index.js';
 
 class ModalComponent {
   /**

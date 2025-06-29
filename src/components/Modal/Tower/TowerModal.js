@@ -1,8 +1,7 @@
 /**
  * Tower Modal Component - Handles the tower/basecamp detail modal
  */
-import { flashUpdate } from '../../utils/helpers.js';
-import { updateNodeName } from '../../utils/firebase.js';
+import { flashUpdate, updateNodeName } from '../../../utils/index.js';
 
 class TowerModalComponent {
   /**
@@ -18,7 +17,6 @@ class TowerModalComponent {
     this.signalBarId = 'tower-modal-signal-bar';
     this.lastUpdateId = 'tower-modal-lastupdate';
     this.coordsId = 'tower-modal-coords';
-    this.coverageId = 'tower-modal-coverage';
     this.connectHikersBtnId = 'connect-hikers';
     this.viewCoverageBtnId = 'view-coverage';
     this.closeBtnClass = 'close-btn';
@@ -26,6 +24,7 @@ class TowerModalComponent {
     this.activeTowerId = null;
     this.activeTower = null;
     this.originalNodeName = ''; // Store original name to detect changes
+    this.originalCoverageRadius = 0; // Store original coverage radius to detect changes
   }
 
   /**
@@ -56,6 +55,9 @@ class TowerModalComponent {
     
     // Set up editable name handling
     this.setupEditableName();
+    
+    // Set up editable coverage radius handling
+    this.setupEditableCoverage();
     
     // Add "Live" indicator
     this.addUpdateIndicator();
@@ -129,17 +131,7 @@ class TowerModalComponent {
     }
   }
 
-  /**
-   * Get signal strength color based on percentage
-   * @param {number} strength - Signal strength percentage
-   * @returns {string} CSS color value
-   */
-  getSignalColor(strength) {
-    if (strength >= 80) return '#48bb78'; // Green
-    if (strength >= 60) return '#ed8936'; // Orange
-    if (strength >= 40) return '#ecc94b'; // Yellow
-    return '#f56565'; // Red
-  }
+  // Removed getCoverageColor method since we're not using visual indicators
 
   /**
    * Add a live update indicator to the modal header
@@ -195,14 +187,15 @@ class TowerModalComponent {
     document.getElementById(this.typeId).textContent = tower.type || 'Tower';
     document.getElementById(this.statusId).textContent = tower.status || 'Active';
     
-    // Update signal strength
-    const signalStrength = tower.signalStrength || 85;
-    document.getElementById(this.signalStrengthId).textContent = `${Math.round(signalStrength)}%`;
+    // Update coverage radius - display only the value in meters
+    const coverageRadius = tower.coverageRadius || tower.signalStrength || 500; // Backward compatibility
+    this.originalCoverageRadius = coverageRadius; // Store for editing
+    document.getElementById(this.signalStrengthId).textContent = `${coverageRadius}m`;
     
+    // Hide the visual bar since we're not showing percentages
     const signalBar = document.getElementById(this.signalBarId);
     if (signalBar) {
-      signalBar.style.width = `${signalStrength}%`;
-      signalBar.style.backgroundColor = this.getSignalColor(signalStrength);
+      signalBar.style.display = 'none';
     }
     
     document.getElementById(this.lastUpdateId).textContent = new Date(tower.lastUpdate || Date.now()).toLocaleTimeString();
@@ -211,9 +204,6 @@ class TowerModalComponent {
     const formattedCoords = `${tower.lat.toFixed(5)}, ${tower.lon.toFixed(5)}`;
     document.getElementById(this.coordsId).textContent = formattedCoords;
     
-    // Update coverage range
-    const coverageRange = tower.coverageRange || 500;
-    document.getElementById(this.coverageId).textContent = `${coverageRange}m`;
     
     // Flash updates for all values
     flashUpdate(this.nameId);
@@ -222,15 +212,6 @@ class TowerModalComponent {
     flashUpdate(this.signalStrengthId);
     flashUpdate(this.coordsId);
     flashUpdate(this.lastUpdateId);
-    flashUpdate(this.coverageId);
-    
-    // Also update signal bar visual indication
-    if (signalBar) {
-      signalBar.classList.add('updating');
-      setTimeout(() => {
-        signalBar.classList.remove('updating');
-      }, 500);
-    }
   }
 
   /**
@@ -279,6 +260,87 @@ class TowerModalComponent {
         nameElement.blur(); // Trigger blur event to save
       }
     });
+  }
+
+  /**
+   * Set up editable coverage radius handling
+   */
+  setupEditableCoverage() {
+    const coverageElement = document.getElementById(this.signalStrengthId);
+    if (!coverageElement) return;
+    
+    // Store original value when starting edit
+    coverageElement.addEventListener('focus', () => {
+      this.originalCoverageRadius = parseInt(coverageElement.textContent.replace('m', '')) || 500;
+      console.log('Started editing coverage radius, original:', this.originalCoverageRadius);
+    });
+    
+    // Handle edit completion
+    coverageElement.addEventListener('blur', () => {
+      const newCoverageText = coverageElement.textContent.trim().replace('m', '');
+      const newCoverage = parseInt(newCoverageText);
+      
+      // Validate coverage radius (must be a positive number)
+      if (!newCoverage || newCoverage <= 0 || isNaN(newCoverage)) {
+        coverageElement.textContent = `${this.originalCoverageRadius}m`;
+        this.showToast('Coverage radius must be a positive number', true);
+        return;
+      }
+      
+      // Ensure it shows 'm' suffix
+      coverageElement.textContent = `${newCoverage}m`;
+      
+      // Only update if coverage changed
+      if (newCoverage !== this.originalCoverageRadius) {
+        this.updateCoverageRadius(newCoverage);
+      }
+    });
+    
+    // Handle enter key to confirm edit
+    coverageElement.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        coverageElement.blur(); // Trigger blur event to save
+      }
+      
+      // Only allow numbers and backspace/delete
+      if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+        e.preventDefault();
+      }
+    });
+  }
+
+  /**
+   * Update coverage radius in the tower data
+   * @param {number} newRadius - The new coverage radius in meters
+   */
+  async updateCoverageRadius(newRadius) {
+    if (!this.activeTowerId || !this.activeTower) return;
+    
+    try {
+      console.log(`Updating tower ${this.activeTowerId} coverage radius to: ${newRadius}m`);
+      
+      // Update the local tower object
+      this.activeTower.coverageRadius = newRadius;
+      this.activeTower.coverageRange = newRadius; // Backward compatibility
+      this.activeTower.lastUpdate = Date.now();
+      
+      this.showToast(`Coverage radius updated to: ${newRadius}m`);
+      console.log(`Tower coverage radius updated to: ${newRadius}m`);
+      
+      // Note: In a real application, you might want to save this to a database
+      // For now, it's just stored in the local object
+      
+    } catch (error) {
+      console.error('Error updating coverage radius:', error);
+      this.showToast('Error updating coverage radius', true);
+      
+      // Revert to original value in UI
+      const coverageElement = document.getElementById(this.signalStrengthId);
+      if (coverageElement) {
+        coverageElement.textContent = `${this.originalCoverageRadius}m`;
+      }
+    }
   }
 }
 

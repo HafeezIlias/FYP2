@@ -19062,22 +19062,20 @@ class MapComponent {
 
 /***/ }),
 
-/***/ "./src/components/Modal/Modal.js":
-/*!***************************************!*\
-  !*** ./src/components/Modal/Modal.js ***!
-  \***************************************/
+/***/ "./src/components/Modal/Hiker/HikerModal.js":
+/*!**************************************************!*\
+  !*** ./src/components/Modal/Hiker/HikerModal.js ***!
+  \**************************************************/
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
-/* harmony import */ var _utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/helpers.js */ "./src/utils/helpers.js");
-/* harmony import */ var _utils_firebase_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/firebase.js */ "./src/utils/firebase.js");
+/* harmony import */ var _utils_index_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../utils/index.js */ "./src/utils/index.js");
 /**
  * Modal Component - Handles the hiker detail modal
  */
-
 
 
 class ModalComponent {
@@ -19211,7 +19209,7 @@ class ModalComponent {
     
     try {
       console.log(`Updating node ${this.activeHikerId} name to: ${newName}`);
-      const success = await (0,_utils_firebase_js__WEBPACK_IMPORTED_MODULE_1__.updateNodeName)(this.activeHikerId, newName);
+      const success = await (0,_utils_index_js__WEBPACK_IMPORTED_MODULE_0__.updateNodeName)(this.activeHikerId, newName);
       
       if (success) {
         console.log(`Node name updated to: ${newName}`);
@@ -19391,7 +19389,7 @@ class ModalComponent {
     const batteryFill = document.getElementById(this.batteryFillId);
     if (batteryFill) {
       batteryFill.style.width = `${hiker.battery}%`;
-      batteryFill.style.backgroundColor = (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.getBatteryColor)(hiker.battery);
+      batteryFill.style.backgroundColor = (0,_utils_index_js__WEBPACK_IMPORTED_MODULE_0__.getBatteryColor)(hiker.battery);
     }
     
     document.getElementById(this.lastUpdateId).textContent = new Date(hiker.lastUpdate).toLocaleTimeString();
@@ -19404,11 +19402,11 @@ class ModalComponent {
     this.updateSosStatus(hiker);
     
     // Flash updates for all values regardless of changes
-    (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.nameId);
-    (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.statusId);
-    (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.batteryId);
-    (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.coordsId);
-    (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.lastUpdateId);
+    (0,_utils_index_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.nameId);
+    (0,_utils_index_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.statusId);
+    (0,_utils_index_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.batteryId);
+    (0,_utils_index_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.coordsId);
+    (0,_utils_index_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.lastUpdateId);
     
     // Also update battery fill visual indication
     if (batteryFill) {
@@ -19472,22 +19470,20 @@ class ModalComponent {
 
 /***/ }),
 
-/***/ "./src/components/Modal/TowerModal.js":
-/*!********************************************!*\
-  !*** ./src/components/Modal/TowerModal.js ***!
-  \********************************************/
+/***/ "./src/components/Modal/Tower/TowerModal.js":
+/*!**************************************************!*\
+  !*** ./src/components/Modal/Tower/TowerModal.js ***!
+  \**************************************************/
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
-/* harmony import */ var _utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/helpers.js */ "./src/utils/helpers.js");
-/* harmony import */ var _utils_firebase_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/firebase.js */ "./src/utils/firebase.js");
+/* harmony import */ var _utils_index_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../utils/index.js */ "./src/utils/index.js");
 /**
  * Tower Modal Component - Handles the tower/basecamp detail modal
  */
-
 
 
 class TowerModalComponent {
@@ -19504,7 +19500,6 @@ class TowerModalComponent {
     this.signalBarId = 'tower-modal-signal-bar';
     this.lastUpdateId = 'tower-modal-lastupdate';
     this.coordsId = 'tower-modal-coords';
-    this.coverageId = 'tower-modal-coverage';
     this.connectHikersBtnId = 'connect-hikers';
     this.viewCoverageBtnId = 'view-coverage';
     this.closeBtnClass = 'close-btn';
@@ -19512,6 +19507,7 @@ class TowerModalComponent {
     this.activeTowerId = null;
     this.activeTower = null;
     this.originalNodeName = ''; // Store original name to detect changes
+    this.originalCoverageRadius = 0; // Store original coverage radius to detect changes
   }
 
   /**
@@ -19542,6 +19538,9 @@ class TowerModalComponent {
     
     // Set up editable name handling
     this.setupEditableName();
+    
+    // Set up editable coverage radius handling
+    this.setupEditableCoverage();
     
     // Add "Live" indicator
     this.addUpdateIndicator();
@@ -19587,7 +19586,7 @@ class TowerModalComponent {
     
     try {
       console.log(`Updating tower node ${this.activeTowerId} name to: ${newName}`);
-      const success = await (0,_utils_firebase_js__WEBPACK_IMPORTED_MODULE_1__.updateNodeName)(this.activeTowerId, newName);
+      const success = await (0,_utils_index_js__WEBPACK_IMPORTED_MODULE_0__.updateNodeName)(this.activeTowerId, newName);
       
       if (success) {
         console.log(`Tower node name updated to: ${newName}`);
@@ -19615,17 +19614,7 @@ class TowerModalComponent {
     }
   }
 
-  /**
-   * Get signal strength color based on percentage
-   * @param {number} strength - Signal strength percentage
-   * @returns {string} CSS color value
-   */
-  getSignalColor(strength) {
-    if (strength >= 80) return '#48bb78'; // Green
-    if (strength >= 60) return '#ed8936'; // Orange
-    if (strength >= 40) return '#ecc94b'; // Yellow
-    return '#f56565'; // Red
-  }
+  // Removed getCoverageColor method since we're not using visual indicators
 
   /**
    * Add a live update indicator to the modal header
@@ -19681,14 +19670,15 @@ class TowerModalComponent {
     document.getElementById(this.typeId).textContent = tower.type || 'Tower';
     document.getElementById(this.statusId).textContent = tower.status || 'Active';
     
-    // Update signal strength
-    const signalStrength = tower.signalStrength || 85;
-    document.getElementById(this.signalStrengthId).textContent = `${Math.round(signalStrength)}%`;
+    // Update coverage radius - display only the value in meters
+    const coverageRadius = tower.coverageRadius || tower.signalStrength || 500; // Backward compatibility
+    this.originalCoverageRadius = coverageRadius; // Store for editing
+    document.getElementById(this.signalStrengthId).textContent = `${coverageRadius}m`;
     
+    // Hide the visual bar since we're not showing percentages
     const signalBar = document.getElementById(this.signalBarId);
     if (signalBar) {
-      signalBar.style.width = `${signalStrength}%`;
-      signalBar.style.backgroundColor = this.getSignalColor(signalStrength);
+      signalBar.style.display = 'none';
     }
     
     document.getElementById(this.lastUpdateId).textContent = new Date(tower.lastUpdate || Date.now()).toLocaleTimeString();
@@ -19697,26 +19687,14 @@ class TowerModalComponent {
     const formattedCoords = `${tower.lat.toFixed(5)}, ${tower.lon.toFixed(5)}`;
     document.getElementById(this.coordsId).textContent = formattedCoords;
     
-    // Update coverage range
-    const coverageRange = tower.coverageRange || 500;
-    document.getElementById(this.coverageId).textContent = `${coverageRange}m`;
     
     // Flash updates for all values
-    (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.nameId);
-    (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.typeId);
-    (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.statusId);
-    (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.signalStrengthId);
-    (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.coordsId);
-    (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.lastUpdateId);
-    (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.coverageId);
-    
-    // Also update signal bar visual indication
-    if (signalBar) {
-      signalBar.classList.add('updating');
-      setTimeout(() => {
-        signalBar.classList.remove('updating');
-      }, 500);
-    }
+    (0,_utils_index_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.nameId);
+    (0,_utils_index_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.typeId);
+    (0,_utils_index_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.statusId);
+    (0,_utils_index_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.signalStrengthId);
+    (0,_utils_index_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.coordsId);
+    (0,_utils_index_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate)(this.lastUpdateId);
   }
 
   /**
@@ -19765,6 +19743,87 @@ class TowerModalComponent {
         nameElement.blur(); // Trigger blur event to save
       }
     });
+  }
+
+  /**
+   * Set up editable coverage radius handling
+   */
+  setupEditableCoverage() {
+    const coverageElement = document.getElementById(this.signalStrengthId);
+    if (!coverageElement) return;
+    
+    // Store original value when starting edit
+    coverageElement.addEventListener('focus', () => {
+      this.originalCoverageRadius = parseInt(coverageElement.textContent.replace('m', '')) || 500;
+      console.log('Started editing coverage radius, original:', this.originalCoverageRadius);
+    });
+    
+    // Handle edit completion
+    coverageElement.addEventListener('blur', () => {
+      const newCoverageText = coverageElement.textContent.trim().replace('m', '');
+      const newCoverage = parseInt(newCoverageText);
+      
+      // Validate coverage radius (must be a positive number)
+      if (!newCoverage || newCoverage <= 0 || isNaN(newCoverage)) {
+        coverageElement.textContent = `${this.originalCoverageRadius}m`;
+        this.showToast('Coverage radius must be a positive number', true);
+        return;
+      }
+      
+      // Ensure it shows 'm' suffix
+      coverageElement.textContent = `${newCoverage}m`;
+      
+      // Only update if coverage changed
+      if (newCoverage !== this.originalCoverageRadius) {
+        this.updateCoverageRadius(newCoverage);
+      }
+    });
+    
+    // Handle enter key to confirm edit
+    coverageElement.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        coverageElement.blur(); // Trigger blur event to save
+      }
+      
+      // Only allow numbers and backspace/delete
+      if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+        e.preventDefault();
+      }
+    });
+  }
+
+  /**
+   * Update coverage radius in the tower data
+   * @param {number} newRadius - The new coverage radius in meters
+   */
+  async updateCoverageRadius(newRadius) {
+    if (!this.activeTowerId || !this.activeTower) return;
+    
+    try {
+      console.log(`Updating tower ${this.activeTowerId} coverage radius to: ${newRadius}m`);
+      
+      // Update the local tower object
+      this.activeTower.coverageRadius = newRadius;
+      this.activeTower.coverageRange = newRadius; // Backward compatibility
+      this.activeTower.lastUpdate = Date.now();
+      
+      this.showToast(`Coverage radius updated to: ${newRadius}m`);
+      console.log(`Tower coverage radius updated to: ${newRadius}m`);
+      
+      // Note: In a real application, you might want to save this to a database
+      // For now, it's just stored in the local object
+      
+    } catch (error) {
+      console.error('Error updating coverage radius:', error);
+      this.showToast('Error updating coverage radius', true);
+      
+      // Revert to original value in UI
+      const coverageElement = document.getElementById(this.signalStrengthId);
+      if (coverageElement) {
+        coverageElement.textContent = `${this.originalCoverageRadius}m`;
+      }
+    }
   }
 }
 
@@ -20290,6 +20349,376 @@ class SettingsComponent {
     } catch (error) {
       console.warn('Error opening settings modal from public method:', error);
     }
+  }
+}
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (SettingsComponent); 
+
+/***/ }),
+
+/***/ "./src/components/Settings/SettingsComponent.js":
+/*!******************************************************!*\
+  !*** ./src/components/Settings/SettingsComponent.js ***!
+  \******************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+class SettingsComponent {
+  constructor() {
+    this.modalId = 'settings-modal';
+    this.settingsFormId = 'settings-form';
+    this.closeButtonId = 'settings-close-btn';
+    this.notificationsContainerId = 'notifications-container';
+
+    // Default settings
+    this.settings = {
+      notifications: {
+        sos: true,
+        battery: true,
+        batteryThreshold: 20,
+        sosHandled: true,
+        emergencyDispatched: true
+      },
+      map: {
+        refreshRate: 5, // seconds
+        defaultZoom: 15
+      },
+      simulation: {
+        enabled: true,
+        updateInterval: 3000 // ms
+      }
+    };
+    
+    // Load settings from localStorage if available
+    this.loadSettings();
+    
+    // Create notifications container if it doesn't exist
+    this.ensureNotificationsContainer();
+  }
+
+  init() {
+    // Add event listeners for the settings modal
+    const closeButton = document.getElementById(this.closeButtonId);
+    if (closeButton) {
+      closeButton.addEventListener('click', this.closeModal.bind(this));
+    }
+
+    const settingsForm = document.getElementById(this.settingsFormId);
+    if (settingsForm) {
+      settingsForm.addEventListener('submit', this.saveSettings.bind(this));
+      
+      // Set initial form values from current settings
+      this.populateForm();
+    }
+
+    // Handle click outside modal to close
+    const modal = document.getElementById(this.modalId);
+    if (modal) {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          this.closeModal();
+        }
+      });
+    }
+  }
+
+  openModal() {
+    const modal = document.getElementById(this.modalId);
+    if (modal) {
+      modal.classList.add('active');
+      this.populateForm();
+    }
+  }
+
+  closeModal() {
+    const modal = document.getElementById(this.modalId);
+    if (modal) {
+      modal.classList.remove('active');
+    }
+  }
+
+  populateForm() {
+    // Notifications settings
+    const sosNotifications = document.getElementById('setting-sos-notifications');
+    if (sosNotifications) sosNotifications.checked = this.settings.notifications.sos;
+    
+    const batteryNotifications = document.getElementById('setting-battery-notifications');
+    if (batteryNotifications) batteryNotifications.checked = this.settings.notifications.battery;
+    
+    const batteryThreshold = document.getElementById('setting-battery-threshold');
+    if (batteryThreshold) batteryThreshold.value = this.settings.notifications.batteryThreshold;
+    
+    const sosHandledNotifications = document.getElementById('setting-sos-handled-notifications');
+    if (sosHandledNotifications) sosHandledNotifications.checked = this.settings.notifications.sosHandled;
+    
+    const emergencyNotifications = document.getElementById('setting-emergency-notifications');
+    if (emergencyNotifications) emergencyNotifications.checked = this.settings.notifications.emergencyDispatched;
+    
+    // Map settings
+    const mapRefresh = document.getElementById('setting-map-refresh');
+    if (mapRefresh) mapRefresh.value = this.settings.map.refreshRate;
+    
+    const mapZoom = document.getElementById('setting-map-zoom');
+    if (mapZoom) mapZoom.value = this.settings.map.defaultZoom;
+    
+    // Simulation settings
+    const simulationEnabled = document.getElementById('setting-simulation-enabled');
+    if (simulationEnabled) simulationEnabled.checked = this.settings.simulation.enabled;
+    
+    const simulationInterval = document.getElementById('setting-simulation-interval');
+    if (simulationInterval) simulationInterval.value = this.settings.simulation.updateInterval / 1000; // Convert back to seconds for display
+  }
+
+  saveSettings(e) {
+    e.preventDefault();
+    
+    // Notifications settings
+    const sosNotifications = document.getElementById('setting-sos-notifications');
+    this.settings.notifications.sos = sosNotifications ? sosNotifications.checked : false;
+    
+    const batteryNotifications = document.getElementById('setting-battery-notifications');
+    this.settings.notifications.battery = batteryNotifications ? batteryNotifications.checked : false;
+    
+    const batteryThreshold = document.getElementById('setting-battery-threshold');
+    this.settings.notifications.batteryThreshold = batteryThreshold ? parseInt(batteryThreshold.value) : 20;
+    
+    const sosHandledNotifications = document.getElementById('setting-sos-handled-notifications');
+    this.settings.notifications.sosHandled = sosHandledNotifications ? sosHandledNotifications.checked : false;
+    
+    const emergencyNotifications = document.getElementById('setting-emergency-notifications');
+    this.settings.notifications.emergencyDispatched = emergencyNotifications ? emergencyNotifications.checked : false;
+    
+    // Map settings
+    const mapRefresh = document.getElementById('setting-map-refresh');
+    this.settings.map.refreshRate = mapRefresh ? parseInt(mapRefresh.value) : 5;
+    
+    const mapZoom = document.getElementById('setting-map-zoom');
+    this.settings.map.defaultZoom = mapZoom ? parseInt(mapZoom.value) : 15;
+    
+    // Simulation settings
+    const simulationEnabled = document.getElementById('setting-simulation-enabled');
+    this.settings.simulation.enabled = simulationEnabled ? simulationEnabled.checked : false;
+    
+    const simulationInterval = document.getElementById('setting-simulation-interval');
+    this.settings.simulation.updateInterval = simulationInterval ? parseInt(simulationInterval.value) * 1000 : 3000; // Convert to milliseconds
+    
+    // Save settings to localStorage
+    this.saveSettingsToStorage();
+    
+    // Show success notification
+    this.showNotification('Settings saved successfully', 'success');
+    
+    // Close modal
+    this.closeModal();
+    
+    // Return the updated settings
+    return this.settings;
+  }
+
+  getSettings() {
+    return this.settings;
+  }
+
+  loadSettings() {
+    const savedSettings = localStorage.getItem('hikerTrackingSettings');
+    if (savedSettings) {
+      try {
+        const parsedSettings = JSON.parse(savedSettings);
+        this.settings = this.mergeSettings(this.settings, parsedSettings);
+      } catch (e) {
+        console.error('Error loading settings from localStorage:', e);
+      }
+    }
+  }
+
+  saveSettingsToStorage() {
+    try {
+      localStorage.setItem('hikerTrackingSettings', JSON.stringify(this.settings));
+    } catch (e) {
+      console.error('Error saving settings to localStorage:', e);
+    }
+  }
+
+  // Helper to merge saved settings with defaults (to handle new settings added)
+  mergeSettings(defaults, saved) {
+    const result = { ...defaults };
+    
+    for (const key in saved) {
+      if (typeof saved[key] === 'object' && saved[key] !== null && key in defaults) {
+        result[key] = this.mergeSettings(defaults[key], saved[key]);
+      } else if (key in defaults) {
+        result[key] = saved[key];
+      }
+    }
+    
+    return result;
+  }
+
+  ensureNotificationsContainer() {
+    let container = document.getElementById(this.notificationsContainerId);
+    
+    if (!container) {
+      container = document.createElement('div');
+      container.id = this.notificationsContainerId;
+      container.className = 'notifications-container';
+      document.body.appendChild(container);
+    }
+    
+    return container;
+  }
+
+  showNotification(message, type = 'info', duration = 5000, icon = null) {
+    const container = this.ensureNotificationsContainer();
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    
+    // Determine appropriate icon if not specified
+    if (!icon) {
+      switch (type) {
+        case 'success':
+          icon = 'check-circle';
+          break;
+        case 'error':
+          icon = 'exclamation-circle';
+          break;
+        case 'warning':
+          icon = 'exclamation-triangle';
+          break;
+        case 'sos':
+          icon = 'exclamation-triangle';
+          break;
+        case 'sosHandled':
+          icon = 'check-circle';
+          break;
+        case 'emergency':
+          icon = 'ambulance';
+          break;
+        default:
+          icon = 'info-circle';
+      }
+    }
+    
+    // Create notification content
+    notification.innerHTML = `
+      <div class="notification-icon">
+        <i class="fas fa-${icon}"></i>
+      </div>
+      <div class="notification-content">
+        <div class="notification-message">${message}</div>
+      </div>
+      <button class="notification-close">
+        <i class="fas fa-times"></i>
+      </button>
+    `;
+    
+    // Add to container
+    container.appendChild(notification);
+    
+    // Add event listener for close button
+    const closeButton = notification.querySelector('.notification-close');
+    if (closeButton) {
+      closeButton.addEventListener('click', () => {
+        this.removeNotification(notification);
+      });
+    }
+    
+    // Show notification with animation
+    setTimeout(() => {
+      notification.classList.add('show');
+    }, 10);
+    
+    // Auto remove after duration
+    if (duration) {
+      setTimeout(() => {
+        this.removeNotification(notification);
+      }, duration);
+    }
+    
+    return notification;
+  }
+
+  removeNotification(notification) {
+    // Add hide animation
+    notification.classList.remove('show');
+    notification.classList.add('hide');
+    
+    // Remove from DOM after animation completes
+    setTimeout(() => {
+      notification.remove();
+    }, 300);
+  }
+
+  // Check if notifications are enabled
+  areNotificationsEnabled(type) {
+    switch (type) {
+      case 'sos':
+        return this.settings.notifications.sos;
+      case 'battery':
+        return this.settings.notifications.battery;
+      case 'sosHandled':
+        return this.settings.notifications.sosHandled;
+      case 'emergency':
+        return this.settings.notifications.emergencyDispatched;
+      default:
+        return true;
+    }
+  }
+
+  getBatteryThreshold() {
+    return this.settings.notifications.batteryThreshold;
+  }
+
+  // Method to show SOS status notification
+  showSosStatusNotification(hiker, statusType) {
+    if (!this.areNotificationsEnabled(statusType)) {
+      return null;
+    }
+    
+    let message, type, icon, duration;
+    
+    switch (statusType) {
+      case 'sos':
+        message = `SOS Alert! ${hiker.name} has triggered an emergency signal`;
+        type = 'sos';
+        icon = 'exclamation-triangle';
+        duration = 10000; // Longer duration for emergency
+        break;
+      case 'sosHandled':
+        message = `SOS for ${hiker.name} has been marked as handled`;
+        type = 'sosHandled';
+        icon = 'check-circle';
+        duration = 5000;
+        break;
+      case 'emergency':
+        message = `Emergency services dispatched for ${hiker.name}`;
+        type = 'emergency';
+        icon = 'ambulance';
+        duration = 7000;
+        break;
+      default:
+        return null;
+    }
+    
+    return this.showNotification(message, type, duration, icon);
+  }
+
+  // Method to show battery notification
+  showBatteryNotification(hiker) {
+    if (!this.areNotificationsEnabled('battery')) {
+      return null;
+    }
+    
+    if (hiker.battery <= this.getBatteryThreshold()) {
+      const message = `Low Battery Alert! ${hiker.name}'s device is at ${hiker.battery}%`;
+      return this.showNotification(message, 'warning', 5000, 'battery-quarter');
+    }
+    
+    return null;
   }
 }
 
@@ -21010,8 +21439,8 @@ class SidebarComponent {
       </div>
       <div class="tower-details">
         <div class="tower-detail-item">
-          <i class="fas fa-signal"></i>
-          ${Math.round(tower.signalStrength)}%
+          <i class="fas fa-wifi"></i>
+          ${tower.coverageRadius || tower.signalStrength || 500}m
         </div>
         <div class="tower-status ${tower.status.toLowerCase()}">
           ${tower.status}
@@ -21952,6 +22381,59 @@ class TowerManager {
 
 /***/ }),
 
+/***/ "./src/components/index.js":
+/*!*********************************!*\
+  !*** ./src/components/index.js ***!
+  \*********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   HikerModal: () => (/* reexport safe */ _Modal_Hiker_HikerModal_js__WEBPACK_IMPORTED_MODULE_2__["default"]),
+/* harmony export */   MapComponent: () => (/* reexport safe */ _Map_Map_js__WEBPACK_IMPORTED_MODULE_0__["default"]),
+/* harmony export */   ModalComponent: () => (/* reexport safe */ _Modal_Hiker_HikerModal_js__WEBPACK_IMPORTED_MODULE_2__["default"]),
+/* harmony export */   SettingsComponent: () => (/* reexport safe */ _Settings_Settings_js__WEBPACK_IMPORTED_MODULE_4__["default"]),
+/* harmony export */   SettingsMainComponent: () => (/* reexport safe */ _Settings_SettingsComponent_js__WEBPACK_IMPORTED_MODULE_5__["default"]),
+/* harmony export */   SidebarComponent: () => (/* reexport safe */ _Sidebar_Sidebar_js__WEBPACK_IMPORTED_MODULE_1__["default"]),
+/* harmony export */   TowerControls: () => (/* reexport safe */ _Tower_TowerControls_js__WEBPACK_IMPORTED_MODULE_7__["default"]),
+/* harmony export */   TowerManager: () => (/* reexport safe */ _Tower_TowerManager_js__WEBPACK_IMPORTED_MODULE_8__["default"]),
+/* harmony export */   TowerModal: () => (/* reexport safe */ _Modal_Tower_TowerModal_js__WEBPACK_IMPORTED_MODULE_3__["default"]),
+/* harmony export */   TowerModalComponent: () => (/* reexport safe */ _Modal_Tower_TowerModal_js__WEBPACK_IMPORTED_MODULE_3__["default"]),
+/* harmony export */   TrackSafetySettings: () => (/* reexport safe */ _Settings_TrackSafetySettings_js__WEBPACK_IMPORTED_MODULE_6__["default"])
+/* harmony export */ });
+/* harmony import */ var _Map_Map_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./Map/Map.js */ "./src/components/Map/Map.js");
+/* harmony import */ var _Sidebar_Sidebar_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Sidebar/Sidebar.js */ "./src/components/Sidebar/Sidebar.js");
+/* harmony import */ var _Modal_Hiker_HikerModal_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./Modal/Hiker/HikerModal.js */ "./src/components/Modal/Hiker/HikerModal.js");
+/* harmony import */ var _Modal_Tower_TowerModal_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./Modal/Tower/TowerModal.js */ "./src/components/Modal/Tower/TowerModal.js");
+/* harmony import */ var _Settings_Settings_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./Settings/Settings.js */ "./src/components/Settings/Settings.js");
+/* harmony import */ var _Settings_SettingsComponent_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./Settings/SettingsComponent.js */ "./src/components/Settings/SettingsComponent.js");
+/* harmony import */ var _Settings_TrackSafetySettings_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./Settings/TrackSafetySettings.js */ "./src/components/Settings/TrackSafetySettings.js");
+/* harmony import */ var _Tower_TowerControls_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./Tower/TowerControls.js */ "./src/components/Tower/TowerControls.js");
+/* harmony import */ var _Tower_TowerManager_js__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./Tower/TowerManager.js */ "./src/components/Tower/TowerManager.js");
+// Main components barrel export - centralizes all component imports
+// Similar to Next.js routing system
+
+// Map components
+
+
+// Sidebar components  
+
+
+// Modal components
+
+
+
+// Settings components
+
+
+
+
+// Tower components
+
+ 
+
+/***/ }),
+
 /***/ "./src/models/Tower.js":
 /*!*****************************!*\
   !*** ./src/models/Tower.js ***!
@@ -21974,21 +22456,21 @@ class Tower {
    * @param {number} lon - Longitude coordinate
    * @param {string} type - Tower type ('Tower' or 'Basecamp')
    * @param {string} status - Tower status ('Active', 'Maintenance', 'Offline')
-   * @param {number} signalStrength - Signal strength percentage (0-100)
+   * @param {number} coverageRadius - Coverage radius in meters
    * @param {Object} options - Additional options
    */
-  constructor(id, name, lat, lon, type = 'Tower', status = 'Active', signalStrength = 85, options = {}) {
+  constructor(id, name, lat, lon, type = 'Tower', status = 'Active', coverageRadius = 500, options = {}) {
     this.id = id;
     this.name = name;
     this.lat = lat;
     this.lon = lon;
     this.type = type; // 'Tower' or 'Basecamp'
     this.status = status; // 'Active', 'Maintenance', 'Offline'
-    this.signalStrength = signalStrength;
+    this.coverageRadius = coverageRadius; // Coverage radius in meters
     this.lastUpdate = Date.now();
     
-    // Optional coverage range (can be null)
-    this.coverageRange = options.coverageRange || null;
+    // Deprecated: keeping for backward compatibility but will be removed
+    this.coverageRange = options.coverageRange || this.coverageRadius;
     
     // Type-specific properties
     if (type === 'Tower') {
@@ -22029,11 +22511,12 @@ class Tower {
   }
 
   /**
-   * Update signal strength
-   * @param {number} strength - New signal strength (0-100)
+   * Update coverage radius
+   * @param {number} radius - New coverage radius in meters
    */
-  updateSignalStrength(strength) {
-    this.signalStrength = Math.max(0, Math.min(100, strength));
+  updateCoverageRadius(radius) {
+    this.coverageRadius = Math.max(0, radius);
+    this.coverageRange = this.coverageRadius; // Keep backward compatibility
     this.lastUpdate = Date.now();
   }
 
@@ -22071,23 +22554,14 @@ class Tower {
     }
   }
 
-  /**
-   * Get signal strength color
-   * @returns {string} CSS color value
-   */
-  getSignalColor() {
-    if (this.signalStrength >= 80) return '#48bb78'; // Green
-    if (this.signalStrength >= 60) return '#ed8936'; // Orange
-    if (this.signalStrength >= 40) return '#ecc94b'; // Yellow
-    return '#f56565'; // Red
-  }
+  // Removed getCoverageColor method since we're only displaying numeric values
 
   /**
    * Check if tower is operational
-   * @returns {boolean} True if tower is active and has good signal
+   * @returns {boolean} True if tower is active and has coverage
    */
   isOperational() {
-    return this.status === 'Active' && this.signalStrength >= 30;
+    return this.status === 'Active' && this.coverageRadius > 0;
   }
 
   /**
@@ -22151,9 +22625,9 @@ class Tower {
       lon: this.lon,
       type: this.type,
       status: this.status,
-      signalStrength: this.signalStrength,
+      coverageRadius: this.coverageRadius,
       lastUpdate: this.lastUpdate,
-      coverageRange: this.coverageRange,
+      coverageRange: this.coverageRange, // Backward compatibility
       antennaHeight: this.antennaHeight,
       powerSource: this.powerSource,
       frequency: this.frequency,
@@ -22179,7 +22653,7 @@ class Tower {
       data.lon,
       data.type,
       data.status,
-      data.signalStrength,
+      data.coverageRadius || data.signalStrength || 500, // Backward compatibility
       {
         coverageRange: data.coverageRange,
         antennaHeight: data.antennaHeight,
@@ -22602,6 +23076,22 @@ class TrackSafetyModule {
 }
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (TrackSafetyModule); 
+
+/***/ }),
+
+/***/ "./src/modules/index.js":
+/*!******************************!*\
+  !*** ./src/modules/index.js ***!
+  \******************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   TrackSafetyModule: () => (/* reexport safe */ _TrackSafetyModule_js__WEBPACK_IMPORTED_MODULE_0__["default"])
+/* harmony export */ });
+/* harmony import */ var _TrackSafetyModule_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./TrackSafetyModule.js */ "./src/modules/TrackSafetyModule.js");
+// Modules barrel export
+ 
 
 /***/ }),
 
@@ -24046,16 +24536,48 @@ function createSampleTowers(count = 3, centerCoords = [3.139, 101.6869]) {
       const lon = centerCoords[1] + (Math.random() - 0.5) * 0.1;
       const type = types[Math.floor(Math.random() * types.length)];
       const status = statuses[Math.floor(Math.random() * statuses.length)];
-      const signalStrength = 60 + Math.random() * 40; // 60-100%
+      const coverageRadius = Math.round(300 + Math.random() * 700); // 300-1000m
       
       const options = {
-        coverageRange: Math.round(300 + Math.random() * 400), // Optional: 300-700m
+        coverageRange: coverageRadius, // Backward compatibility
       };
       
-      return new Tower(`tower_${index}`, name, lat, lon, type, status, signalStrength, options);
+      return new Tower(`tower_${index}`, name, lat, lon, type, status, coverageRadius, options);
     });
   });
 } 
+
+/***/ }),
+
+/***/ "./src/utils/index.js":
+/*!****************************!*\
+  !*** ./src/utils/index.js ***!
+  \****************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   TrackSafetyManager: () => (/* reexport safe */ _TrackSafetyManager_js__WEBPACK_IMPORTED_MODULE_2__["default"]),
+/* harmony export */   createSampleHikers: () => (/* reexport safe */ _helpers_js__WEBPACK_IMPORTED_MODULE_0__.createSampleHikers),
+/* harmony export */   createSampleTowers: () => (/* reexport safe */ _helpers_js__WEBPACK_IMPORTED_MODULE_0__.createSampleTowers),
+/* harmony export */   fetchHikersFromFirebase: () => (/* reexport safe */ _firebase_js__WEBPACK_IMPORTED_MODULE_1__.fetchHikersFromFirebase),
+/* harmony export */   flashUpdate: () => (/* reexport safe */ _helpers_js__WEBPACK_IMPORTED_MODULE_0__.flashUpdate),
+/* harmony export */   formatTimeAgo: () => (/* reexport safe */ _helpers_js__WEBPACK_IMPORTED_MODULE_0__.formatTimeAgo),
+/* harmony export */   getBatteryColor: () => (/* reexport safe */ _helpers_js__WEBPACK_IMPORTED_MODULE_0__.getBatteryColor),
+/* harmony export */   getStatusIcon: () => (/* reexport safe */ _helpers_js__WEBPACK_IMPORTED_MODULE_0__.getStatusIcon),
+/* harmony export */   listenForHikersUpdates: () => (/* reexport safe */ _firebase_js__WEBPACK_IMPORTED_MODULE_1__.listenForHikersUpdates),
+/* harmony export */   updateHikerActiveStatus: () => (/* reexport safe */ _firebase_js__WEBPACK_IMPORTED_MODULE_1__.updateHikerActiveStatus),
+/* harmony export */   updateHikerData: () => (/* reexport safe */ _firebase_js__WEBPACK_IMPORTED_MODULE_1__.updateHikerData),
+/* harmony export */   updateHikerSosStatus: () => (/* reexport safe */ _firebase_js__WEBPACK_IMPORTED_MODULE_1__.updateHikerSosStatus),
+/* harmony export */   updateNodeName: () => (/* reexport safe */ _firebase_js__WEBPACK_IMPORTED_MODULE_1__.updateNodeName)
+/* harmony export */ });
+/* harmony import */ var _helpers_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./helpers.js */ "./src/utils/helpers.js");
+/* harmony import */ var _firebase_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./firebase.js */ "./src/utils/firebase.js");
+/* harmony import */ var _TrackSafetyManager_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./TrackSafetyManager.js */ "./src/utils/TrackSafetyManager.js");
+// Utils barrel export
+
+
+ 
 
 /***/ })
 
@@ -24321,24 +24843,13 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
-/* harmony import */ var _utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./utils/helpers.js */ "./src/utils/helpers.js");
-/* harmony import */ var _utils_firebase_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./utils/firebase.js */ "./src/utils/firebase.js");
-/* harmony import */ var _components_Map_Map_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./components/Map/Map.js */ "./src/components/Map/Map.js");
-/* harmony import */ var _components_Sidebar_Sidebar_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./components/Sidebar/Sidebar.js */ "./src/components/Sidebar/Sidebar.js");
-/* harmony import */ var _components_Modal_Modal_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./components/Modal/Modal.js */ "./src/components/Modal/Modal.js");
-/* harmony import */ var _components_Modal_TowerModal_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./components/Modal/TowerModal.js */ "./src/components/Modal/TowerModal.js");
-/* harmony import */ var _components_Settings_Settings_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./components/Settings/Settings.js */ "./src/components/Settings/Settings.js");
-/* harmony import */ var _modules_TrackSafetyModule_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./modules/TrackSafetyModule.js */ "./src/modules/TrackSafetyModule.js");
-/* harmony import */ var _components_Tower_TowerManager_js__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./components/Tower/TowerManager.js */ "./src/components/Tower/TowerManager.js");
-/* harmony import */ var _components_Tower_TowerControls_js__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./components/Tower/TowerControls.js */ "./src/components/Tower/TowerControls.js");
+/* harmony import */ var _utils_index_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./utils/index.js */ "./src/utils/index.js");
+/* harmony import */ var _components_index_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./components/index.js */ "./src/components/index.js");
+/* harmony import */ var _modules_index_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./modules/index.js */ "./src/modules/index.js");
 /**
  * Main Application - Coordinates all components
  */
-
-
-
-
-
+// Using centralized imports - Next.js style
 
 
 
@@ -24349,13 +24860,13 @@ class HikerTrackingApp {
   constructor() {
     this.hikers = [];
     this.towers = [];
-    this.map = new _components_Map_Map_js__WEBPACK_IMPORTED_MODULE_2__["default"]();
-    this.sidebar = new _components_Sidebar_Sidebar_js__WEBPACK_IMPORTED_MODULE_3__["default"]();
-    this.modal = new _components_Modal_Modal_js__WEBPACK_IMPORTED_MODULE_4__["default"]();
-    this.towerModal = new _components_Modal_TowerModal_js__WEBPACK_IMPORTED_MODULE_5__["default"]();
-    this.settings = new _components_Settings_Settings_js__WEBPACK_IMPORTED_MODULE_6__["default"]();
+    this.map = new _components_index_js__WEBPACK_IMPORTED_MODULE_1__.MapComponent();
+    this.sidebar = new _components_index_js__WEBPACK_IMPORTED_MODULE_1__.SidebarComponent();
+    this.modal = new _components_index_js__WEBPACK_IMPORTED_MODULE_1__.ModalComponent();
+    this.towerModal = new _components_index_js__WEBPACK_IMPORTED_MODULE_1__.TowerModalComponent();
+    this.settings = new _components_index_js__WEBPACK_IMPORTED_MODULE_1__.SettingsComponent();
     this.trackSafetyModule = null; // Will be initialized in init()
-    this.towerManager = new _components_Tower_TowerManager_js__WEBPACK_IMPORTED_MODULE_8__["default"]();
+    this.towerManager = new _components_index_js__WEBPACK_IMPORTED_MODULE_1__.TowerManager();
     this.towerControls = null; // Will be initialized in init()
     this.simulationInterval = null;
     this.simulationSpeed = 3000; // 3 seconds instead of 1 second
@@ -24485,7 +24996,7 @@ class HikerTrackingApp {
     );
 
     // Initialize tower controls for adding towers
-    this.towerControls = new _components_Tower_TowerControls_js__WEBPACK_IMPORTED_MODULE_9__["default"](this.towerManager, this.map);
+    this.towerControls = new _components_index_js__WEBPACK_IMPORTED_MODULE_1__.TowerControls(this.towerManager, this.map);
     this.towerControls.init();
 
     // Set up tower manager update callback
@@ -24495,7 +25006,7 @@ class HikerTrackingApp {
     });
     
     // Initialize track safety module
-    this.trackSafetyModule = new _modules_TrackSafetyModule_js__WEBPACK_IMPORTED_MODULE_7__["default"](
+    this.trackSafetyModule = new _modules_index_js__WEBPACK_IMPORTED_MODULE_2__.TrackSafetyModule(
       this,
       this.map,
       {
@@ -24547,8 +25058,8 @@ class HikerTrackingApp {
     if (useSimulation) {
       // Use simulated data
       const settings = this.settings.getSettings();
-      this.hikers = await (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.createSampleHikers)(settings.simulation.hikersCount || 10);
-      const sampleTowers = await (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.createSampleTowers)(3); // Create 3 sample towers/basecamps
+      this.hikers = await (0,_utils_index_js__WEBPACK_IMPORTED_MODULE_0__.createSampleHikers)(settings.simulation.hikersCount || 10);
+      const sampleTowers = await (0,_utils_index_js__WEBPACK_IMPORTED_MODULE_0__.createSampleTowers)(3); // Create 3 sample towers/basecamps
       this.towerManager.loadTowers(sampleTowers);
       
       // Start simulation
@@ -24621,7 +25132,7 @@ class HikerTrackingApp {
     
     try {
       // Subscribe to real-time updates
-      this.firebaseUnsubscribe = (0,_utils_firebase_js__WEBPACK_IMPORTED_MODULE_1__.listenForHikersUpdates)((updatedHikers) => {
+      this.firebaseUnsubscribe = (0,_utils_index_js__WEBPACK_IMPORTED_MODULE_0__.listenForHikersUpdates)((updatedHikers) => {
         // Log the data we received
         console.log('Received Firebase update with hikers:', updatedHikers);
         
@@ -24775,7 +25286,7 @@ class HikerTrackingApp {
           reset: action === 'reset'
         });
         
-        (0,_utils_firebase_js__WEBPACK_IMPORTED_MODULE_1__.updateHikerSosStatus)(
+        (0,_utils_index_js__WEBPACK_IMPORTED_MODULE_0__.updateHikerSosStatus)(
           hikerId, 
           action !== 'reset', // SOS is active unless resetting
           action === 'handled' || action === 'emergency', // Whether handled
@@ -25027,7 +25538,7 @@ class HikerTrackingApp {
     this.stopSimulation();
     
     // Generate new hikers
-    this.hikers = await (0,_utils_helpers_js__WEBPACK_IMPORTED_MODULE_0__.createSampleHikers)(count);
+    this.hikers = await (0,_utils_index_js__WEBPACK_IMPORTED_MODULE_0__.createSampleHikers)(count);
     
     // Render and restart
     this.renderAll();

@@ -109,13 +109,13 @@ export function createSampleTowers(count = 3, centerCoords = [3.139, 101.6869]) 
       const lon = centerCoords[1] + (Math.random() - 0.5) * 0.1;
       const type = types[Math.floor(Math.random() * types.length)];
       const status = statuses[Math.floor(Math.random() * statuses.length)];
-      const signalStrength = 60 + Math.random() * 40; // 60-100%
+      const coverageRadius = Math.round(300 + Math.random() * 700); // 300-1000m
       
       const options = {
-        coverageRange: Math.round(300 + Math.random() * 400), // Optional: 300-700m
+        coverageRange: coverageRadius, // Backward compatibility
       };
       
-      return new Tower(`tower_${index}`, name, lat, lon, type, status, signalStrength, options);
+      return new Tower(`tower_${index}`, name, lat, lon, type, status, coverageRadius, options);
     });
   });
 } 

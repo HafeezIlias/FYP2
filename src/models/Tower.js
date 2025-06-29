@@ -10,21 +10,21 @@ class Tower {
    * @param {number} lon - Longitude coordinate
    * @param {string} type - Tower type ('Tower' or 'Basecamp')
    * @param {string} status - Tower status ('Active', 'Maintenance', 'Offline')
-   * @param {number} signalStrength - Signal strength percentage (0-100)
+   * @param {number} coverageRadius - Coverage radius in meters
    * @param {Object} options - Additional options
    */
-  constructor(id, name, lat, lon, type = 'Tower', status = 'Active', signalStrength = 85, options = {}) {
+  constructor(id, name, lat, lon, type = 'Tower', status = 'Active', coverageRadius = 500, options = {}) {
     this.id = id;
     this.name = name;
     this.lat = lat;
     this.lon = lon;
     this.type = type; // 'Tower' or 'Basecamp'
     this.status = status; // 'Active', 'Maintenance', 'Offline'
-    this.signalStrength = signalStrength;
+    this.coverageRadius = coverageRadius; // Coverage radius in meters
     this.lastUpdate = Date.now();
     
-    // Optional coverage range (can be null)
-    this.coverageRange = options.coverageRange || null;
+    // Deprecated: keeping for backward compatibility but will be removed
+    this.coverageRange = options.coverageRange || this.coverageRadius;
     
     // Type-specific properties
     if (type === 'Tower') {
@@ -65,11 +65,12 @@ class Tower {
   }
 
   /**
-   * Update signal strength
-   * @param {number} strength - New signal strength (0-100)
+   * Update coverage radius
+   * @param {number} radius - New coverage radius in meters
    */
-  updateSignalStrength(strength) {
-    this.signalStrength = Math.max(0, Math.min(100, strength));
+  updateCoverageRadius(radius) {
+    this.coverageRadius = Math.max(0, radius);
+    this.coverageRange = this.coverageRadius; // Keep backward compatibility
     this.lastUpdate = Date.now();
   }
 
@@ -107,23 +108,14 @@ class Tower {
     }
   }
 
-  /**
-   * Get signal strength color
-   * @returns {string} CSS color value
-   */
-  getSignalColor() {
-    if (this.signalStrength >= 80) return '#48bb78'; // Green
-    if (this.signalStrength >= 60) return '#ed8936'; // Orange
-    if (this.signalStrength >= 40) return '#ecc94b'; // Yellow
-    return '#f56565'; // Red
-  }
+  // Removed getCoverageColor method since we're only displaying numeric values
 
   /**
    * Check if tower is operational
-   * @returns {boolean} True if tower is active and has good signal
+   * @returns {boolean} True if tower is active and has coverage
    */
   isOperational() {
-    return this.status === 'Active' && this.signalStrength >= 30;
+    return this.status === 'Active' && this.coverageRadius > 0;
   }
 
   /**
@@ -187,9 +179,9 @@ class Tower {
       lon: this.lon,
       type: this.type,
       status: this.status,
-      signalStrength: this.signalStrength,
+      coverageRadius: this.coverageRadius,
       lastUpdate: this.lastUpdate,
-      coverageRange: this.coverageRange,
+      coverageRange: this.coverageRange, // Backward compatibility
       antennaHeight: this.antennaHeight,
       powerSource: this.powerSource,
       frequency: this.frequency,
@@ -215,7 +207,7 @@ class Tower {
       data.lon,
       data.type,
       data.status,
-      data.signalStrength,
+      data.coverageRadius || data.signalStrength || 500, // Backward compatibility
       {
         coverageRange: data.coverageRange,
         antennaHeight: data.antennaHeight,

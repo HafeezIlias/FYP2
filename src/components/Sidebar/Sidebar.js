@@ -196,8 +196,8 @@ class SidebarComponent {
       </div>
       <div class="tower-details">
         <div class="tower-detail-item">
-          <i class="fas fa-signal"></i>
-          ${Math.round(tower.signalStrength)}%
+          <i class="fas fa-wifi"></i>
+          ${tower.coverageRadius || tower.signalStrength || 500}m
         </div>
         <div class="tower-status ${tower.status.toLowerCase()}">
           ${tower.status}

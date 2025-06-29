@@ -1,16 +1,27 @@
 /**
  * Main Application - Coordinates all components
  */
-import { createSampleHikers, createSampleTowers } from './utils/helpers.js';
-import { fetchHikersFromFirebase, listenForHikersUpdates, updateHikerSosStatus, updateNodeName } from './utils/firebase.js';
-import MapComponent from './components/Map/Map.js';
-import SidebarComponent from './components/Sidebar/Sidebar.js';
-import ModalComponent from './components/Modal/Modal.js';
-import TowerModalComponent from './components/Modal/TowerModal.js';
-import SettingsComponent from './components/Settings/Settings.js';
-import TrackSafetyModule from './modules/TrackSafetyModule.js';
-import TowerManager from './components/Tower/TowerManager.js';
-import TowerControls from './components/Tower/TowerControls.js';
+// Using centralized imports - Next.js style
+import { 
+  createSampleHikers, 
+  createSampleTowers,
+  fetchHikersFromFirebase, 
+  listenForHikersUpdates, 
+  updateHikerSosStatus, 
+  updateNodeName 
+} from './utils/index.js';
+
+import {
+  MapComponent,
+  SidebarComponent,
+  ModalComponent,
+  TowerModalComponent,
+  SettingsComponent,
+  TowerManager,
+  TowerControls
+} from './components/index.js';
+
+import { TrackSafetyModule } from './modules/index.js';
 
 class HikerTrackingApp {
   constructor() {

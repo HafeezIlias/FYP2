@@ -13,11 +13,11 @@
   <link rel="stylesheet" href="src/styles/main.css" />
   <link rel="stylesheet" href="src/components/Sidebar/Sidebar.css" />
   <link rel="stylesheet" href="src/components/Map/Map.css" />
-      <link rel="stylesheet" href="src/components/Modal/Modal.css" />
-    <link rel="stylesheet" href="src/components/Modal/TowerModal.css" />
-    <link rel="stylesheet" href="src/components/Tower/TowerControls.css" />
-    <link rel="stylesheet" href="src/components/Settings/Settings.css" />
-    <link rel="stylesheet" href="src/components/Settings/TrackSafety.css" />
+  <link rel="stylesheet" href="src/components/Modal/Hiker/HikerModal.css" />
+  <link rel="stylesheet" href="src/components/Modal/Tower/TowerModal.css" />
+  <link rel="stylesheet" href="src/components/Tower/TowerControls.css" />
+  <link rel="stylesheet" href="src/components/Settings/Settings.css" />
+  <link rel="stylesheet" href="src/components/Settings/TrackSafety.css" />
 </head>
 <body>
   <div class="dashboard-container">
@@ -173,21 +173,11 @@
               <span id="tower-modal-status" class="detail-value">Active</span>
             </div>
           </div>
-          <div class="tower-detail signal-strength">
-            <div class="detail-icon"><i class="fas fa-signal"></i></div>
+          <div class="tower-detail coverage-radius">
+            <div class="detail-icon"><i class="fas fa-wifi"></i></div>
             <div class="detail-info">
-              <span class="detail-label">Signal Strength</span>
-              <span id="tower-modal-signal" class="detail-value">85%</span>
-              <div class="signal-bar-container">
-                <div id="tower-modal-signal-bar" class="signal-bar"></div>
-              </div>
-            </div>
-          </div>
-          <div class="tower-detail coverage-range">
-            <div class="detail-icon"><i class="fas fa-circle"></i></div>
-            <div class="detail-info">
-              <span class="detail-label">Coverage Range</span>
-              <span id="tower-modal-coverage" class="detail-value coverage-range">500m</span>
+              <span class="detail-label">Coverage Radius</span>
+              <span id="tower-modal-signal" class="detail-value editable-coverage" contenteditable="true" title="Click to edit coverage radius">500m</span>
             </div>
           </div>
           <div class="tower-detail">

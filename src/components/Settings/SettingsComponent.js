@@ -74,38 +74,68 @@ class SettingsComponent {
 
   populateForm() {
     // Notifications settings
-    document.getElementById('setting-sos-notifications')?.checked = this.settings.notifications.sos;
-    document.getElementById('setting-battery-notifications')?.checked = this.settings.notifications.battery;
-    document.getElementById('setting-battery-threshold')?.value = this.settings.notifications.batteryThreshold;
-    document.getElementById('setting-sos-handled-notifications')?.checked = this.settings.notifications.sosHandled;
-    document.getElementById('setting-emergency-notifications')?.checked = this.settings.notifications.emergencyDispatched;
+    const sosNotifications = document.getElementById('setting-sos-notifications');
+    if (sosNotifications) sosNotifications.checked = this.settings.notifications.sos;
+    
+    const batteryNotifications = document.getElementById('setting-battery-notifications');
+    if (batteryNotifications) batteryNotifications.checked = this.settings.notifications.battery;
+    
+    const batteryThreshold = document.getElementById('setting-battery-threshold');
+    if (batteryThreshold) batteryThreshold.value = this.settings.notifications.batteryThreshold;
+    
+    const sosHandledNotifications = document.getElementById('setting-sos-handled-notifications');
+    if (sosHandledNotifications) sosHandledNotifications.checked = this.settings.notifications.sosHandled;
+    
+    const emergencyNotifications = document.getElementById('setting-emergency-notifications');
+    if (emergencyNotifications) emergencyNotifications.checked = this.settings.notifications.emergencyDispatched;
     
     // Map settings
-    document.getElementById('setting-map-refresh')?.value = this.settings.map.refreshRate;
-    document.getElementById('setting-map-zoom')?.value = this.settings.map.defaultZoom;
+    const mapRefresh = document.getElementById('setting-map-refresh');
+    if (mapRefresh) mapRefresh.value = this.settings.map.refreshRate;
+    
+    const mapZoom = document.getElementById('setting-map-zoom');
+    if (mapZoom) mapZoom.value = this.settings.map.defaultZoom;
     
     // Simulation settings
-    document.getElementById('setting-simulation-enabled')?.checked = this.settings.simulation.enabled;
-    document.getElementById('setting-simulation-interval')?.value = this.settings.simulation.updateInterval / 1000; // Convert back to seconds for display
+    const simulationEnabled = document.getElementById('setting-simulation-enabled');
+    if (simulationEnabled) simulationEnabled.checked = this.settings.simulation.enabled;
+    
+    const simulationInterval = document.getElementById('setting-simulation-interval');
+    if (simulationInterval) simulationInterval.value = this.settings.simulation.updateInterval / 1000; // Convert back to seconds for display
   }
 
   saveSettings(e) {
     e.preventDefault();
     
     // Notifications settings
-    this.settings.notifications.sos = document.getElementById('setting-sos-notifications')?.checked || false;
-    this.settings.notifications.battery = document.getElementById('setting-battery-notifications')?.checked || false;
-    this.settings.notifications.batteryThreshold = parseInt(document.getElementById('setting-battery-threshold')?.value || 20);
-    this.settings.notifications.sosHandled = document.getElementById('setting-sos-handled-notifications')?.checked || false;
-    this.settings.notifications.emergencyDispatched = document.getElementById('setting-emergency-notifications')?.checked || false;
+    const sosNotifications = document.getElementById('setting-sos-notifications');
+    this.settings.notifications.sos = sosNotifications ? sosNotifications.checked : false;
+    
+    const batteryNotifications = document.getElementById('setting-battery-notifications');
+    this.settings.notifications.battery = batteryNotifications ? batteryNotifications.checked : false;
+    
+    const batteryThreshold = document.getElementById('setting-battery-threshold');
+    this.settings.notifications.batteryThreshold = batteryThreshold ? parseInt(batteryThreshold.value) : 20;
+    
+    const sosHandledNotifications = document.getElementById('setting-sos-handled-notifications');
+    this.settings.notifications.sosHandled = sosHandledNotifications ? sosHandledNotifications.checked : false;
+    
+    const emergencyNotifications = document.getElementById('setting-emergency-notifications');
+    this.settings.notifications.emergencyDispatched = emergencyNotifications ? emergencyNotifications.checked : false;
     
     // Map settings
-    this.settings.map.refreshRate = parseInt(document.getElementById('setting-map-refresh')?.value || 5);
-    this.settings.map.defaultZoom = parseInt(document.getElementById('setting-map-zoom')?.value || 15);
+    const mapRefresh = document.getElementById('setting-map-refresh');
+    this.settings.map.refreshRate = mapRefresh ? parseInt(mapRefresh.value) : 5;
+    
+    const mapZoom = document.getElementById('setting-map-zoom');
+    this.settings.map.defaultZoom = mapZoom ? parseInt(mapZoom.value) : 15;
     
     // Simulation settings
-    this.settings.simulation.enabled = document.getElementById('setting-simulation-enabled')?.checked || false;
-    this.settings.simulation.updateInterval = parseInt(document.getElementById('setting-simulation-interval')?.value || 3) * 1000; // Convert to milliseconds
+    const simulationEnabled = document.getElementById('setting-simulation-enabled');
+    this.settings.simulation.enabled = simulationEnabled ? simulationEnabled.checked : false;
+    
+    const simulationInterval = document.getElementById('setting-simulation-interval');
+    this.settings.simulation.updateInterval = simulationInterval ? parseInt(simulationInterval.value) * 1000 : 3000; // Convert to milliseconds
     
     // Save settings to localStorage
     this.saveSettingsToStorage();
