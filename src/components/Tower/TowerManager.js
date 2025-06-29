@@ -16,17 +16,18 @@ class TowerManager {
    * @param {number} lat - Latitude
    * @param {number} lon - Longitude  
    * @param {string} type - Tower type ('Tower' or 'Basecamp')
+   * @param {number} coverageRadius - Coverage radius in meters
    * @param {Object} options - Additional options
    * @returns {Tower} The created tower
    */
-  addTower(name, lat, lon, type = 'Tower', options = {}) {
+  addTower(name, lat, lon, type = 'Tower', coverageRadius = 500, options = {}) {
     const id = `tower_${this.nextId++}`;
-    const tower = new Tower(id, name, lat, lon, type, 'Active', 85, options);
+    const tower = new Tower(id, name, lat, lon, type, 'Active', coverageRadius, options);
     
     this.towers.push(tower);
     this.notifyUpdate();
     
-    console.log(`Added new ${type.toLowerCase()}: ${name} at ${lat}, ${lon}`);
+    console.log(`Added new ${type.toLowerCase()}: ${name} at ${lat}, ${lon} with ${coverageRadius}m coverage`);
     return tower;
   }
 
