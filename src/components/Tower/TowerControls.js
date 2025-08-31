@@ -95,8 +95,6 @@ class TowerControls {
     });
   }
 
-  // Removed old map-clicking mode methods - now using dialog-only approach
-
   /**
    * Show tower creation dialog
    * @param {number} lat - Latitude (optional)

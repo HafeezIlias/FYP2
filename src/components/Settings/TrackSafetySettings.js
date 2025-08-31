@@ -62,22 +62,41 @@ class TrackSafetySettings {
       header.textContent = 'Safety Tracks Management';
       this.container.appendChild(header);
       
-      // Create description
+      // Create description (following settings pattern)
       const description = document.createElement('p');
+      description.className = 'setting-description';
       description.textContent = 'Create and manage hiking tracks with safety corridors to ensure hikers stay on safe paths.';
+      description.style.marginBottom = '15px';
       this.container.appendChild(description);
       
-      // Create the create button
+      // Create button wrapper with proper spacing (following settings pattern)
+      const buttonWrapper = document.createElement('div');
+      buttonWrapper.className = 'setting-item';
+      buttonWrapper.style.marginBottom = '20px';
+      
+      // Create the create button (matching Save Settings button style)
       this.createBtn = document.createElement('button');
       this.createBtn.id = 'create-track-btn';
-      this.createBtn.className = 'btn btn-primary';
+      this.createBtn.className = 'action-btn primary-btn';
       this.createBtn.textContent = 'Create New Track';
-      this.container.appendChild(this.createBtn);
+      this.createBtn.style.cssText = 'padding: 12px 0; width: 100%; border-radius: 8px; border: none; font-weight: 500; font-size: 14px; background: #4299e1; color: white; cursor: pointer; transition: all 0.2s;';
       
-      // Create tracks list container
+      // Add hover effect to match Save Settings button exactly
+      this.createBtn.addEventListener('mouseenter', () => {
+        this.createBtn.style.background = '#3182ce';
+      });
+      this.createBtn.addEventListener('mouseleave', () => {
+        this.createBtn.style.background = '#4299e1';
+      });
+      
+      buttonWrapper.appendChild(this.createBtn);
+      this.container.appendChild(buttonWrapper);
+      
+      // Create tracks list container (following settings pattern)
       this.tracksList = document.createElement('div');
       this.tracksList.id = 'tracks-list';
       this.tracksList.className = 'tracks-list';
+      this.tracksList.style.marginTop = '20px';
       this.container.appendChild(this.tracksList);
       
       // Add to the settings modal - FIX: Use the correct container selector
@@ -118,9 +137,14 @@ class TrackSafetySettings {
               <textarea id="track-description" placeholder="Describe this track (optional)"></textarea>
             </div>
             <div class="form-group">
-              <label for="safety-width">Safety Corridor Width (meters):</label>
-              <input type="range" id="safety-width" min="10" max="200" value="50">
-              <span id="safety-width-value">50m</span>
+              <label for="safe-zone-width">Safe Zone Width (meters) - Green:</label>
+              <input type="range" id="safe-zone-width" min="10" max="150" value="30">
+              <span id="safe-zone-width-value">30m</span>
+            </div>
+            <div class="form-group">
+              <label for="danger-zone-width">Danger Zone Width (meters) - Red:</label>
+              <input type="range" id="danger-zone-width" min="20" max="200" value="50">
+              <span id="danger-zone-width-value">50m</span>
             </div>
             <div id="creation-instructions" class="creation-instructions">
               <h4>Track Creation Instructions:</h4>
@@ -183,10 +207,19 @@ class TrackSafetySettings {
       this.saveTrack();
     });
     
-    // Safety width slider
-    document.getElementById('safety-width')?.addEventListener('input', (e) => {
+    // Safe zone width slider
+    document.getElementById('safe-zone-width')?.addEventListener('input', (e) => {
       const widthValue = parseInt(e.target.value);
-      const widthDisplay = document.getElementById('safety-width-value');
+      const widthDisplay = document.getElementById('safe-zone-width-value');
+      if (widthDisplay) {
+        widthDisplay.textContent = `${widthValue}m`;
+      }
+    });
+    
+    // Danger zone width slider
+    document.getElementById('danger-zone-width')?.addEventListener('input', (e) => {
+      const widthValue = parseInt(e.target.value);
+      const widthDisplay = document.getElementById('danger-zone-width-value');
       if (widthDisplay) {
         widthDisplay.textContent = `${widthValue}m`;
       }
@@ -202,8 +235,10 @@ class TrackSafetySettings {
     // Reset the form
     document.getElementById('track-name').value = '';
     document.getElementById('track-description').value = '';
-    document.getElementById('safety-width').value = '50';
-    document.getElementById('safety-width-value').textContent = '50m';
+    document.getElementById('safe-zone-width').value = '30';
+    document.getElementById('safe-zone-width-value').textContent = '30m';
+    document.getElementById('danger-zone-width').value = '50';
+    document.getElementById('danger-zone-width-value').textContent = '50m';
     
     // Reset track status
     const trackStatus = document.getElementById('track-status');
@@ -227,8 +262,15 @@ class TrackSafetySettings {
         // Fill in form with track data
         document.getElementById('track-name').value = track.name;
         document.getElementById('track-description').value = track.description || '';
-        document.getElementById('safety-width').value = track.safetyWidth;
-        document.getElementById('safety-width-value').textContent = `${track.safetyWidth}m`;
+        
+        // Handle both new and legacy track formats
+        const safeZoneWidth = track.safeZoneWidth || track.safetyWidth || 30;
+        const dangerZoneWidth = track.dangerZoneWidth || (track.safetyWidth * 1.5) || 50;
+        
+        document.getElementById('safe-zone-width').value = safeZoneWidth;
+        document.getElementById('safe-zone-width-value').textContent = `${safeZoneWidth}m`;
+        document.getElementById('danger-zone-width').value = dangerZoneWidth;
+        document.getElementById('danger-zone-width-value').textContent = `${dangerZoneWidth}m`;
       }
     } else {
       this.editingTrackId = null;
@@ -327,23 +369,30 @@ class TrackSafetySettings {
   saveTrack() {
     const nameInput = document.getElementById('track-name');
     const descriptionInput = document.getElementById('track-description');
-    const safetyWidthInput = document.getElementById('safety-width');
+    const safeZoneWidthInput = document.getElementById('safe-zone-width');
+    const dangerZoneWidthInput = document.getElementById('danger-zone-width');
     
-    if (!nameInput || !descriptionInput || !safetyWidthInput) {
+    if (!nameInput || !descriptionInput || !safeZoneWidthInput || !dangerZoneWidthInput) {
       return;
     }
     
     const name = nameInput.value.trim();
     const description = descriptionInput.value.trim();
-    const safetyWidth = parseInt(safetyWidthInput.value);
+    const safeZoneWidth = parseInt(safeZoneWidthInput.value);
+    const dangerZoneWidth = parseInt(dangerZoneWidthInput.value);
     
     if (!name) {
       this.showTrackStatus('Please enter a track name', 'error');
       return;
     }
     
+    if (safeZoneWidth >= dangerZoneWidth) {
+      this.showTrackStatus('Danger zone must be larger than safe zone', 'error');
+      return;
+    }
+    
     // Save the track
-    const trackId = this.trackManager.saveTrack(name, safetyWidth, description);
+    const trackId = this.trackManager.saveTrack(name, safeZoneWidth, dangerZoneWidth, description);
     if (!trackId) {
       this.showTrackStatus('Failed to save track. Make sure you have at least 2 points.', 'error');
       return;
@@ -371,8 +420,10 @@ class TrackSafetySettings {
     // Reset the form for next time
     nameInput.value = '';
     descriptionInput.value = '';
-    safetyWidthInput.value = '50';
-    document.getElementById('safety-width-value').textContent = '50m';
+    safeZoneWidthInput.value = '30';
+    document.getElementById('safe-zone-width-value').textContent = '30m';
+    dangerZoneWidthInput.value = '50';
+    document.getElementById('danger-zone-width-value').textContent = '50m';
     
     // Reset buttons
     document.getElementById('start-drawing-btn').style.display = 'inline-block';
@@ -421,28 +472,37 @@ class TrackSafetySettings {
       const noTracksMessage = document.createElement('div');
       noTracksMessage.className = 'no-tracks-message';
       noTracksMessage.textContent = 'No safety tracks created yet. Click "Create New Track" to add one.';
+      // Following settings theme - match the existing CSS but ensure it's visible
+      noTracksMessage.style.cssText = 'padding: 20px; text-align: center; color: #718096; font-style: italic; font-size: 14px; background-color: #f8f9fa; border-radius: 6px; border: 1px solid #e2e8f0;';
       this.tracksList.appendChild(noTracksMessage);
       return;
     }
     
-    // Create track items
+    // Create track items (using existing TrackSafety.css styling)
     tracks.forEach(track => {
       const trackItem = document.createElement('div');
       trackItem.className = 'track-item';
       trackItem.dataset.trackId = track.id;
+      // Ensure consistent styling from TrackSafety.css is applied
+      trackItem.style.cssText = 'display: flex; justify-content: space-between; align-items: center; background-color: #f8f9fa; padding: 12px; margin-bottom: 10px; border-radius: 6px; border-left: 4px solid #3388ff;';
       
       // Track info
       const trackInfo = document.createElement('div');
       trackInfo.className = 'track-info';
+      trackInfo.style.cssText = 'flex: 1;';
       
-      const trackName = document.createElement('div');
+            const trackName = document.createElement('div');
       trackName.className = 'track-name';
       trackName.textContent = track.name;
+      trackName.style.cssText = 'font-weight: 600; margin-bottom: 4px; font-size: 14px; color: #2d3748;';
       trackInfo.appendChild(trackName);
       
       const trackDetails = document.createElement('div');
       trackDetails.className = 'track-details';
-      trackDetails.textContent = `${track.points.length} waypoints • ${track.safetyWidth}m safety corridor`;
+      const safeZoneWidth = track.safeZoneWidth || track.safetyWidth || 30;
+      const dangerZoneWidth = track.dangerZoneWidth || (track.safetyWidth * 1.5) || 50;
+      trackDetails.textContent = `${track.points.length} waypoints • Safe: ${safeZoneWidth}m • Danger: ${dangerZoneWidth}m`;
+      trackDetails.style.cssText = 'font-size: 13px; color: #718096;';
       trackInfo.appendChild(trackDetails);
       
       trackItem.appendChild(trackInfo);
@@ -450,10 +510,14 @@ class TrackSafetySettings {
       // Track actions
       const trackActions = document.createElement('div');
       trackActions.className = 'track-actions';
+      trackActions.style.cssText = 'display: flex; gap: 10px;';
       
       const editButton = document.createElement('button');
       editButton.className = 'track-action-btn edit-track';
       editButton.textContent = 'Edit';
+      editButton.style.cssText = 'background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 3px; font-size: 14px; color: #4299e1; margin-right: 5px;';
+      editButton.addEventListener('mouseenter', () => editButton.style.backgroundColor = 'rgba(0,0,0,0.05)');
+      editButton.addEventListener('mouseleave', () => editButton.style.backgroundColor = 'transparent');
       editButton.addEventListener('click', () => {
         this.openTrackModal(track.id);
       });
@@ -462,6 +526,9 @@ class TrackSafetySettings {
       const deleteButton = document.createElement('button');
       deleteButton.className = 'track-action-btn delete-track';
       deleteButton.textContent = 'Delete';
+      deleteButton.style.cssText = 'background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 3px; font-size: 14px; color: #f56565;';
+      deleteButton.addEventListener('mouseenter', () => deleteButton.style.backgroundColor = 'rgba(0,0,0,0.05)');
+      deleteButton.addEventListener('mouseleave', () => deleteButton.style.backgroundColor = 'transparent');
       deleteButton.addEventListener('click', () => {
         if (confirm(`Are you sure you want to delete the track "${track.name}"?`)) {
           this.trackManager.deleteTrack(track.id);

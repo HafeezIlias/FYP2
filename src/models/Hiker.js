@@ -105,27 +105,15 @@ class Hiker {
   }
   
   /**
-   * Mark SOS as handled
+   * Handle SOS - unified method for SOS response
    */
-  markSosHandled() {
+  handleSos() {
     if (this.sos && !this.sosHandled) {
       this.sosHandled = true;
       this.sosHandledTime = Date.now();
-      return true;
-    }
-    return false;
-  }
-  
-  /**
-   * Mark emergency services dispatched
-   */
-  dispatchEmergencyServices() {
-    if (this.sos && !this.sosEmergencyDispatched) {
+      // Also dispatch emergency services
       this.sosEmergencyDispatched = true;
       this.sosEmergencyTime = Date.now();
-      // Also mark as handled
-      this.sosHandled = true;
-      this.sosHandledTime = this.sosHandledTime || Date.now();
       return true;
     }
     return false;
@@ -147,9 +135,8 @@ class Hiker {
    */
   getSosStatusText() {
     if (!this.sos) return 'No SOS Active';
-    if (this.sosEmergencyDispatched) return 'Emergency Services Dispatched';
-    if (this.sosHandled) return 'Handled';
-    return 'Pending';
+    if (this.sosHandled) return 'Help On The Way';
+    return 'Pending Response';
   }
   
   /**

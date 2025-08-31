@@ -19108,8 +19108,7 @@ class ModalComponent {
     this.sosStatusContainerId = 'sos-status-container';
     this.sosHandledStatusId = 'sos-handled-status';
     this.sosActionsId = 'sos-actions';
-    this.markSosHandledBtnId = 'mark-sos-handled';
-    this.markSosEmergencyBtnId = 'mark-sos-emergency';
+    this.handleSosBtnId = 'handle-sos';
     this.resetSosBtnId = 'reset-sos';
     
     this.activeHikerId = null;
@@ -19121,11 +19120,10 @@ class ModalComponent {
    * Initialize the modal
    * @param {Function} onTrackHiker - Callback for track hiker button
    * @param {Function} onSendMessage - Callback for send message button
-   * @param {Function} onMarkSosHandled - Callback for mark SOS handled button
-   * @param {Function} onMarkSosEmergency - Callback for emergency services button
+   * @param {Function} onHandleSos - Callback for handle SOS button
    * @param {Function} onResetSos - Callback for reset SOS button
    */
-  init(onTrackHiker, onSendMessage, onMarkSosHandled, onMarkSosEmergency, onResetSos) {
+  init(onTrackHiker, onSendMessage, onHandleSos, onResetSos) {
     // Set up close button
     document.querySelector(`#${this.modalId} .${this.closeBtnClass}`)?.addEventListener('click', () => {
       this.closeModal();
@@ -19146,17 +19144,10 @@ class ModalComponent {
       }
     });
     
-    // Set up SOS handling buttons
-    document.getElementById(this.markSosHandledBtnId)?.addEventListener('click', () => {
-      if (onMarkSosHandled && this.activeHiker && this.activeHiker.sos && !this.activeHiker.sosHandled) {
-        onMarkSosHandled(this.activeHikerId);
-        this.updateSosStatus(this.activeHiker);
-      }
-    });
-    
-    document.getElementById(this.markSosEmergencyBtnId)?.addEventListener('click', () => {
-      if (onMarkSosEmergency && this.activeHiker && this.activeHiker.sos && !this.activeHiker.sosEmergencyDispatched) {
-        onMarkSosEmergency(this.activeHikerId);
+    // Set up SOS handling button
+    document.getElementById(this.handleSosBtnId)?.addEventListener('click', () => {
+      if (onHandleSos && this.activeHiker && this.activeHiker.sos && !this.activeHiker.sosHandled) {
+        onHandleSos(this.activeHikerId);
         this.updateSosStatus(this.activeHiker);
       }
     });
@@ -19289,8 +19280,7 @@ class ModalComponent {
     const sosStatusContainer = document.getElementById(this.sosStatusContainerId);
     const sosActions = document.getElementById(this.sosActionsId);
     const sosHandledStatus = document.getElementById(this.sosHandledStatusId);
-    const markSosHandledBtn = document.getElementById(this.markSosHandledBtnId);
-    const markSosEmergencyBtn = document.getElementById(this.markSosEmergencyBtnId);
+    const handleSosBtn = document.getElementById(this.handleSosBtnId);
     const resetSosBtn = document.getElementById(this.resetSosBtnId);
     
     // Ensure all elements exist before proceeding
@@ -19316,7 +19306,7 @@ class ModalComponent {
       sosHandledStatus.textContent = statusText;
       
       // Update status classes
-      if (hiker.sosHandled || hiker.sosEmergencyDispatched) {
+      if (hiker.sosHandled) {
         sosHandledStatus.classList.add('handled');
         sosHandledStatus.classList.remove('pending');
       } else {
@@ -19328,7 +19318,7 @@ class ModalComponent {
     // Update icon if it exists
     const statusIcon = sosStatusContainer.querySelector('.detail-icon');
     if (statusIcon) {
-      if (hiker.sosHandled || hiker.sosEmergencyDispatched) {
+      if (hiker.sosHandled) {
         statusIcon.classList.add('handled');
       } else {
         statusIcon.classList.remove('handled');
@@ -19336,23 +19326,13 @@ class ModalComponent {
     }
     
     // Update button states if buttons exist
-    if (markSosHandledBtn) {
+    if (handleSosBtn) {
       if (hiker.sosHandled) {
-        markSosHandledBtn.classList.add('disabled');
-        markSosHandledBtn.disabled = true;
+        handleSosBtn.classList.add('disabled');
+        handleSosBtn.disabled = true;
       } else {
-        markSosHandledBtn.classList.remove('disabled');
-        markSosHandledBtn.disabled = false;
-      }
-    }
-    
-    if (markSosEmergencyBtn) {
-      if (hiker.sosEmergencyDispatched) {
-        markSosEmergencyBtn.classList.add('disabled');
-        markSosEmergencyBtn.disabled = true;
-      } else {
-        markSosEmergencyBtn.classList.remove('disabled');
-        markSosEmergencyBtn.disabled = false;
+        handleSosBtn.classList.remove('disabled');
+        handleSosBtn.disabled = false;
       }
     }
     
@@ -20820,22 +20800,41 @@ class TrackSafetySettings {
       header.textContent = 'Safety Tracks Management';
       this.container.appendChild(header);
       
-      // Create description
+      // Create description (following settings pattern)
       const description = document.createElement('p');
+      description.className = 'setting-description';
       description.textContent = 'Create and manage hiking tracks with safety corridors to ensure hikers stay on safe paths.';
+      description.style.marginBottom = '15px';
       this.container.appendChild(description);
       
-      // Create the create button
+      // Create button wrapper with proper spacing (following settings pattern)
+      const buttonWrapper = document.createElement('div');
+      buttonWrapper.className = 'setting-item';
+      buttonWrapper.style.marginBottom = '20px';
+      
+      // Create the create button (matching Save Settings button style)
       this.createBtn = document.createElement('button');
       this.createBtn.id = 'create-track-btn';
-      this.createBtn.className = 'btn btn-primary';
+      this.createBtn.className = 'action-btn primary-btn';
       this.createBtn.textContent = 'Create New Track';
-      this.container.appendChild(this.createBtn);
+      this.createBtn.style.cssText = 'padding: 12px 0; width: 100%; border-radius: 8px; border: none; font-weight: 500; font-size: 14px; background: #4299e1; color: white; cursor: pointer; transition: all 0.2s;';
       
-      // Create tracks list container
+      // Add hover effect to match Save Settings button exactly
+      this.createBtn.addEventListener('mouseenter', () => {
+        this.createBtn.style.background = '#3182ce';
+      });
+      this.createBtn.addEventListener('mouseleave', () => {
+        this.createBtn.style.background = '#4299e1';
+      });
+      
+      buttonWrapper.appendChild(this.createBtn);
+      this.container.appendChild(buttonWrapper);
+      
+      // Create tracks list container (following settings pattern)
       this.tracksList = document.createElement('div');
       this.tracksList.id = 'tracks-list';
       this.tracksList.className = 'tracks-list';
+      this.tracksList.style.marginTop = '20px';
       this.container.appendChild(this.tracksList);
       
       // Add to the settings modal - FIX: Use the correct container selector
@@ -20876,9 +20875,14 @@ class TrackSafetySettings {
               <textarea id="track-description" placeholder="Describe this track (optional)"></textarea>
             </div>
             <div class="form-group">
-              <label for="safety-width">Safety Corridor Width (meters):</label>
-              <input type="range" id="safety-width" min="10" max="200" value="50">
-              <span id="safety-width-value">50m</span>
+              <label for="safe-zone-width">Safe Zone Width (meters) - Green:</label>
+              <input type="range" id="safe-zone-width" min="10" max="150" value="30">
+              <span id="safe-zone-width-value">30m</span>
+            </div>
+            <div class="form-group">
+              <label for="danger-zone-width">Danger Zone Width (meters) - Red:</label>
+              <input type="range" id="danger-zone-width" min="20" max="200" value="50">
+              <span id="danger-zone-width-value">50m</span>
             </div>
             <div id="creation-instructions" class="creation-instructions">
               <h4>Track Creation Instructions:</h4>
@@ -20941,10 +20945,19 @@ class TrackSafetySettings {
       this.saveTrack();
     });
     
-    // Safety width slider
-    document.getElementById('safety-width')?.addEventListener('input', (e) => {
+    // Safe zone width slider
+    document.getElementById('safe-zone-width')?.addEventListener('input', (e) => {
       const widthValue = parseInt(e.target.value);
-      const widthDisplay = document.getElementById('safety-width-value');
+      const widthDisplay = document.getElementById('safe-zone-width-value');
+      if (widthDisplay) {
+        widthDisplay.textContent = `${widthValue}m`;
+      }
+    });
+    
+    // Danger zone width slider
+    document.getElementById('danger-zone-width')?.addEventListener('input', (e) => {
+      const widthValue = parseInt(e.target.value);
+      const widthDisplay = document.getElementById('danger-zone-width-value');
       if (widthDisplay) {
         widthDisplay.textContent = `${widthValue}m`;
       }
@@ -20960,8 +20973,10 @@ class TrackSafetySettings {
     // Reset the form
     document.getElementById('track-name').value = '';
     document.getElementById('track-description').value = '';
-    document.getElementById('safety-width').value = '50';
-    document.getElementById('safety-width-value').textContent = '50m';
+    document.getElementById('safe-zone-width').value = '30';
+    document.getElementById('safe-zone-width-value').textContent = '30m';
+    document.getElementById('danger-zone-width').value = '50';
+    document.getElementById('danger-zone-width-value').textContent = '50m';
     
     // Reset track status
     const trackStatus = document.getElementById('track-status');
@@ -20985,8 +21000,15 @@ class TrackSafetySettings {
         // Fill in form with track data
         document.getElementById('track-name').value = track.name;
         document.getElementById('track-description').value = track.description || '';
-        document.getElementById('safety-width').value = track.safetyWidth;
-        document.getElementById('safety-width-value').textContent = `${track.safetyWidth}m`;
+        
+        // Handle both new and legacy track formats
+        const safeZoneWidth = track.safeZoneWidth || track.safetyWidth || 30;
+        const dangerZoneWidth = track.dangerZoneWidth || (track.safetyWidth * 1.5) || 50;
+        
+        document.getElementById('safe-zone-width').value = safeZoneWidth;
+        document.getElementById('safe-zone-width-value').textContent = `${safeZoneWidth}m`;
+        document.getElementById('danger-zone-width').value = dangerZoneWidth;
+        document.getElementById('danger-zone-width-value').textContent = `${dangerZoneWidth}m`;
       }
     } else {
       this.editingTrackId = null;
@@ -21085,23 +21107,30 @@ class TrackSafetySettings {
   saveTrack() {
     const nameInput = document.getElementById('track-name');
     const descriptionInput = document.getElementById('track-description');
-    const safetyWidthInput = document.getElementById('safety-width');
+    const safeZoneWidthInput = document.getElementById('safe-zone-width');
+    const dangerZoneWidthInput = document.getElementById('danger-zone-width');
     
-    if (!nameInput || !descriptionInput || !safetyWidthInput) {
+    if (!nameInput || !descriptionInput || !safeZoneWidthInput || !dangerZoneWidthInput) {
       return;
     }
     
     const name = nameInput.value.trim();
     const description = descriptionInput.value.trim();
-    const safetyWidth = parseInt(safetyWidthInput.value);
+    const safeZoneWidth = parseInt(safeZoneWidthInput.value);
+    const dangerZoneWidth = parseInt(dangerZoneWidthInput.value);
     
     if (!name) {
       this.showTrackStatus('Please enter a track name', 'error');
       return;
     }
     
+    if (safeZoneWidth >= dangerZoneWidth) {
+      this.showTrackStatus('Danger zone must be larger than safe zone', 'error');
+      return;
+    }
+    
     // Save the track
-    const trackId = this.trackManager.saveTrack(name, safetyWidth, description);
+    const trackId = this.trackManager.saveTrack(name, safeZoneWidth, dangerZoneWidth, description);
     if (!trackId) {
       this.showTrackStatus('Failed to save track. Make sure you have at least 2 points.', 'error');
       return;
@@ -21129,8 +21158,10 @@ class TrackSafetySettings {
     // Reset the form for next time
     nameInput.value = '';
     descriptionInput.value = '';
-    safetyWidthInput.value = '50';
-    document.getElementById('safety-width-value').textContent = '50m';
+    safeZoneWidthInput.value = '30';
+    document.getElementById('safe-zone-width-value').textContent = '30m';
+    dangerZoneWidthInput.value = '50';
+    document.getElementById('danger-zone-width-value').textContent = '50m';
     
     // Reset buttons
     document.getElementById('start-drawing-btn').style.display = 'inline-block';
@@ -21179,28 +21210,37 @@ class TrackSafetySettings {
       const noTracksMessage = document.createElement('div');
       noTracksMessage.className = 'no-tracks-message';
       noTracksMessage.textContent = 'No safety tracks created yet. Click "Create New Track" to add one.';
+      // Following settings theme - match the existing CSS but ensure it's visible
+      noTracksMessage.style.cssText = 'padding: 20px; text-align: center; color: #718096; font-style: italic; font-size: 14px; background-color: #f8f9fa; border-radius: 6px; border: 1px solid #e2e8f0;';
       this.tracksList.appendChild(noTracksMessage);
       return;
     }
     
-    // Create track items
+    // Create track items (using existing TrackSafety.css styling)
     tracks.forEach(track => {
       const trackItem = document.createElement('div');
       trackItem.className = 'track-item';
       trackItem.dataset.trackId = track.id;
+      // Ensure consistent styling from TrackSafety.css is applied
+      trackItem.style.cssText = 'display: flex; justify-content: space-between; align-items: center; background-color: #f8f9fa; padding: 12px; margin-bottom: 10px; border-radius: 6px; border-left: 4px solid #3388ff;';
       
       // Track info
       const trackInfo = document.createElement('div');
       trackInfo.className = 'track-info';
+      trackInfo.style.cssText = 'flex: 1;';
       
-      const trackName = document.createElement('div');
+            const trackName = document.createElement('div');
       trackName.className = 'track-name';
       trackName.textContent = track.name;
+      trackName.style.cssText = 'font-weight: 600; margin-bottom: 4px; font-size: 14px; color: #2d3748;';
       trackInfo.appendChild(trackName);
       
       const trackDetails = document.createElement('div');
       trackDetails.className = 'track-details';
-      trackDetails.textContent = `${track.points.length} waypoints • ${track.safetyWidth}m safety corridor`;
+      const safeZoneWidth = track.safeZoneWidth || track.safetyWidth || 30;
+      const dangerZoneWidth = track.dangerZoneWidth || (track.safetyWidth * 1.5) || 50;
+      trackDetails.textContent = `${track.points.length} waypoints • Safe: ${safeZoneWidth}m • Danger: ${dangerZoneWidth}m`;
+      trackDetails.style.cssText = 'font-size: 13px; color: #718096;';
       trackInfo.appendChild(trackDetails);
       
       trackItem.appendChild(trackInfo);
@@ -21208,10 +21248,14 @@ class TrackSafetySettings {
       // Track actions
       const trackActions = document.createElement('div');
       trackActions.className = 'track-actions';
+      trackActions.style.cssText = 'display: flex; gap: 10px;';
       
       const editButton = document.createElement('button');
       editButton.className = 'track-action-btn edit-track';
       editButton.textContent = 'Edit';
+      editButton.style.cssText = 'background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 3px; font-size: 14px; color: #4299e1; margin-right: 5px;';
+      editButton.addEventListener('mouseenter', () => editButton.style.backgroundColor = 'rgba(0,0,0,0.05)');
+      editButton.addEventListener('mouseleave', () => editButton.style.backgroundColor = 'transparent');
       editButton.addEventListener('click', () => {
         this.openTrackModal(track.id);
       });
@@ -21220,6 +21264,9 @@ class TrackSafetySettings {
       const deleteButton = document.createElement('button');
       deleteButton.className = 'track-action-btn delete-track';
       deleteButton.textContent = 'Delete';
+      deleteButton.style.cssText = 'background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 3px; font-size: 14px; color: #f56565;';
+      deleteButton.addEventListener('mouseenter', () => deleteButton.style.backgroundColor = 'rgba(0,0,0,0.05)');
+      deleteButton.addEventListener('mouseleave', () => deleteButton.style.backgroundColor = 'transparent');
       deleteButton.addEventListener('click', () => {
         if (confirm(`Are you sure you want to delete the track "${track.name}"?`)) {
           this.trackManager.deleteTrack(track.id);
@@ -21815,8 +21862,6 @@ class TowerControls {
     });
   }
 
-  // Removed old map-clicking mode methods - now using dialog-only approach
-
   /**
    * Show tower creation dialog
    * @param {number} lat - Latitude (optional)
@@ -21888,16 +21933,12 @@ class TowerControls {
           <div class="coordinate-method-toggle" style="display: flex; background: #f7fafc; border-radius: 8px; padding: 4px; margin-bottom: 12px;">
             <button type="button" id="map-select-mode" class="coord-method-btn ${hasInitialCoords ? 'active' : ''}" 
                     style="flex: 1; padding: 8px 12px; border: none; background: ${hasInitialCoords ? '#4299E1' : 'transparent'}; 
-                           color: ${hasInitialCoords ? 'white' : '#4a5568'}; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;"
-                    onmouseover="if(!this.classList.contains('coord-active')) { this.style.background='#e2e8f0'; }"
-                    onmouseout="if(!this.classList.contains('coord-active')) { this.style.background='transparent'; }">
+                           color: ${hasInitialCoords ? 'white' : '#4a5568'}; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;">
               <i class="fas fa-map-marker-alt"></i> Select on Map
             </button>
             <button type="button" id="manual-input-mode" class="coord-method-btn ${!hasInitialCoords ? 'active' : ''}"
                     style="flex: 1; padding: 8px 12px; border: none; background: ${!hasInitialCoords ? '#4299E1' : 'transparent'}; 
-                           color: ${!hasInitialCoords ? 'white' : '#4a5568'}; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;"
-                    onmouseover="if(!this.classList.contains('coord-active')) { this.style.background='#e2e8f0'; }"
-                    onmouseout="if(!this.classList.contains('coord-active')) { this.style.background='transparent'; }">
+                           color: ${!hasInitialCoords ? 'white' : '#4a5568'}; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;">
               <i class="fas fa-keyboard"></i> Manual Input
             </button>
           </div>
@@ -22018,10 +22059,8 @@ class TowerControls {
       // Switch to map selection mode
       mapSelectBtn.style.background = '#667eea';
       mapSelectBtn.style.color = 'white';
-      mapSelectBtn.classList.add('coord-active');
       manualInputBtn.style.background = 'transparent';
       manualInputBtn.style.color = '#4a5568';
-      manualInputBtn.classList.remove('coord-active');
       
       mapDisplay.style.display = 'block';
       manualInput.style.display = 'none';
@@ -22046,10 +22085,8 @@ class TowerControls {
       // Switch to manual input mode
       manualInputBtn.style.background = '#667eea';
       manualInputBtn.style.color = 'white';
-      manualInputBtn.classList.add('coord-active');
       mapSelectBtn.style.background = 'transparent';
       mapSelectBtn.style.color = '#4a5568';
-      mapSelectBtn.classList.remove('coord-active');
       
       mapDisplay.style.display = 'none';
       manualInput.style.display = 'block';
@@ -22159,15 +22196,6 @@ class TowerControls {
         this.disableMapSelectionMode();
       }
     });
-
-    // Set initial active class based on hasInitialCoords
-    if (hasInitialCoords) {
-      mapSelectBtn.classList.add('coord-active');
-      manualInputBtn.classList.remove('coord-active');
-    } else {
-      manualInputBtn.classList.add('coord-active');
-      mapSelectBtn.classList.remove('coord-active');
-    }
 
     // If starting in map selection mode and coordinates are provided
     if (hasInitialCoords && mapDisplay.style.display !== 'none') {
@@ -22311,7 +22339,7 @@ class TowerControls {
       top: 20px;
       left: 50%;
       transform: translateX(-50%);
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #4299E1;
       color: white;
       padding: 12px 20px;
       border-radius: 8px;
@@ -23590,10 +23618,11 @@ class TrackSafetyManager {
   /**
    * Save the current track being created
    * @param {string} name - Name of the track
-   * @param {number} safetyWidth - Width of the safety corridor in meters
+   * @param {number} safeZoneWidth - Width of the safe zone in meters (green)
+   * @param {number} dangerZoneWidth - Width of the danger zone in meters (red)
    * @param {string} description - Description of the track
    */
-  saveTrack(name, safetyWidth, description = '') {
+  saveTrack(name, safeZoneWidth, dangerZoneWidth, description = '') {
     if (this.tempTrackPoints.length < 2) {
       console.warn('Cannot save track with less than 2 points');
       return false;
@@ -23604,7 +23633,10 @@ class TrackSafetyManager {
       id: trackId,
       name,
       description,
-      safetyWidth,
+      safeZoneWidth,
+      dangerZoneWidth,
+      // Keep legacy safetyWidth for backward compatibility
+      safetyWidth: safeZoneWidth,
       points: this.tempTrackPoints,
       createdAt: new Date().toISOString()
     };
@@ -23697,6 +23729,8 @@ class TrackSafetyManager {
     if (track.elements) {
       if (track.elements.trackLine) this.map.removeLayer(track.elements.trackLine);
       if (track.elements.corridor) this.map.removeLayer(track.elements.corridor);
+      if (track.elements.safeZone) this.map.removeLayer(track.elements.safeZone);
+      if (track.elements.dangerZone) this.map.removeLayer(track.elements.dangerZone);
       if (track.elements.waypoints) {
         track.elements.waypoints.forEach(marker => this.map.removeLayer(marker));
       }
@@ -23707,52 +23741,88 @@ class TrackSafetyManager {
       waypoints: []
     };
     
-    // Create the track polyline
+    // Determine zone widths - if track has new structure use it, otherwise use legacy
+    const safeZoneWidth = track.safeZoneWidth || track.safetyWidth || 30;
+    const dangerZoneWidth = track.dangerZoneWidth || (track.safetyWidth * 1.5) || 50;
+    
+    // Create danger zone (red - outer zone)
+    const dangerCorridorPoints = this.createCorridorPolygon(track.points, dangerZoneWidth);
+    console.log('Danger corridor points:', dangerCorridorPoints.length, dangerCorridorPoints);
+    if (dangerCorridorPoints.length > 0) {
+      try {
+        track.elements.dangerZone = L.polygon(
+          dangerCorridorPoints.map(point => [point[1], point[0]]), // Convert [lng, lat] to [lat, lng] for Leaflet
+          {
+            color: '#dc2626',
+            weight: 2,
+            opacity: 0.8,
+            fillColor: '#fca5a5',
+            fillOpacity: 0.8,
+            fill: true
+          }
+        ).addTo(this.map);
+      } catch (error) {
+        console.error('Error creating danger zone polygon:', error);
+      }
+    }
+    
+    // Create safe zone (green - inner zone)
+    const safeCorridorPoints = this.createCorridorPolygon(track.points, safeZoneWidth);
+    if (safeCorridorPoints.length > 0) {
+      try {
+        track.elements.safeZone = L.polygon(
+          safeCorridorPoints.map(point => [point[1], point[0]]), // Convert [lng, lat] to [lat, lng] for Leaflet
+          {
+            color: '#059669',
+            weight: 2,
+            opacity: 0.8,
+            fillColor: '#86efac',
+            fillOpacity: 0.8,
+            fill: true
+          }
+        ).addTo(this.map);
+      } catch (error) {
+        console.error('Error creating safe zone polygon:', error);
+      }
+    }
+    
+    // Create the track polyline (on top)
     track.elements.trackLine = L.polyline(
       track.points.map(point => [point[1], point[0]]), // Convert [lng, lat] to [lat, lng] for Leaflet
       {
-        color: '#3388ff',
+        color: '#1e40af',
         weight: 4,
-        opacity: 0.8
-      }
-    ).addTo(this.map);
-    
-    // Create a safety corridor around the track
-    const corridorPoints = this.createCorridorPolygon(track.points, track.safetyWidth);
-    
-    track.elements.corridor = L.polygon(
-      corridorPoints.map(point => [point[1], point[0]]), // Convert [lng, lat] to [lat, lng] for Leaflet
-      {
-        color: '#3388ff',
-        weight: 1,
-        opacity: 0.4,
-        fillColor: '#3388ff',
-        fillOpacity: 0.2
+        opacity: 0.9
       }
     ).addTo(this.map);
     
     // Add waypoint markers
     track.points.forEach((point, index) => {
-      // Only add markers for first, last, and every 3rd point to avoid clutter
-      if (index === 0 || index === track.points.length - 1 || index % 3 === 0) {
-        const color = index === 0 ? '#00ff00' : 
-                     index === track.points.length - 1 ? '#ff0000' : '#3388ff';
-        
-        const marker = L.circleMarker(
-          [point[1], point[0]], // Convert [lng, lat] to [lat, lng] for Leaflet
-          {
-            radius: 5,
-            fillColor: color,
-            color: '#ffffff',
-            weight: 2,
-            opacity: 1,
-            fillOpacity: 1
-          }
-        ).addTo(this.map);
-        
-        track.elements.waypoints.push(marker);
-      }
+      const waypoint = L.circleMarker(
+        [point[1], point[0]], // Convert [lng, lat] to [lat, lng] for Leaflet
+        {
+          radius: 5,
+          fillColor: '#ffffff',
+          color: '#1e40af',
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 1
+        }
+      ).addTo(this.map);
+      
+      track.elements.waypoints.push(waypoint);
     });
+    
+    // Add popup to track line with zone information
+    track.elements.trackLine.bindPopup(`
+      <div>
+        <h4>${track.name}</h4>
+        <p><strong>Safe Zone:</strong> ${safeZoneWidth}m (Green)</p>
+        <p><strong>Danger Zone:</strong> ${dangerZoneWidth}m (Red)</p>
+        <p><strong>Points:</strong> ${track.points.length} waypoints</p>
+        ${track.description ? `<p><strong>Description:</strong> ${track.description}</p>` : ''}
+      </div>
+    `);
   }
 
   /**
@@ -23764,77 +23834,107 @@ class TrackSafetyManager {
   createCorridorPolygon(points, widthMeters) {
     if (points.length < 2) return [];
     
+    // Validate input points
+    const validPoints = points.filter(point => {
+      const lng = parseFloat(point[0]);
+      const lat = parseFloat(point[1]);
+      return !isNaN(lng) && !isNaN(lat) && 
+             lng >= -180 && lng <= 180 && 
+             lat >= -90 && lat <= 90;
+    });
+    
+    if (validPoints.length < 2) {
+      console.warn('Not enough valid points to create corridor');
+      return [];
+    }
+    
     // Convert width from meters to approximate degrees
-    // This is a simplification and not accurate for all latitudes
-    // For a production app, you would use a proper geospatial library
-    const lat = points[0][1]; // Use the latitude of the first point
-    // Approximate conversion at this latitude (rough estimate)
+    const lat = validPoints[0][1]; // Use the latitude of the first point
+    
+    // Validate latitude for trigonometric calculations
+    if (isNaN(lat) || lat < -90 || lat > 90) {
+      console.warn('Invalid latitude for corridor calculation');
+      return [];
+    }
+    
     const metersPerDegreeLat = 111320; // approximate meters per degree latitude
     const metersPerDegreeLng = 111320 * Math.cos(lat * Math.PI / 180);
     
     const widthLat = widthMeters / metersPerDegreeLat;
     const widthLng = widthMeters / metersPerDegreeLng;
     
-    // For each segment, calculate perpendicular offset points
+    // Validate computed widths
+    if (isNaN(widthLat) || isNaN(widthLng)) {
+      console.warn('Invalid width calculations for corridor');
+      return [];
+    }
+    
     const corridorPoints = [];
     
-    // Generate left side of corridor (going forward)
-    for (let i = 0; i < points.length - 1; i++) {
-      const p1 = points[i];
-      const p2 = points[i + 1];
-      
-      // Calculate perpendicular direction (90 degrees to track direction)
+    // Helper function to calculate perpendicular offset
+    const calculateOffset = (p1, p2, direction = 1) => {
       const dx = p2[0] - p1[0];
       const dy = p2[1] - p1[1];
       const length = Math.sqrt(dx * dx + dy * dy);
       
-      // Normalize and rotate 90 degrees
-      const perpX = -dy / length;
-      const perpY = dx / length;
+      // Check for zero-length segment
+      if (length < 1e-10) {
+        return null; // Skip this segment
+      }
       
-      // Add offset point to left side
-      corridorPoints.push([
+      // Normalize and rotate 90 degrees
+      const perpX = (-dy / length) * direction;
+      const perpY = (dx / length) * direction;
+      
+      const offsetPoint = [
         p1[0] + perpX * widthLng,
         p1[1] + perpY * widthLat
-      ]);
+      ];
+      
+      // Validate output coordinates
+      if (isNaN(offsetPoint[0]) || isNaN(offsetPoint[1])) {
+        return null;
+      }
+      
+      return offsetPoint;
+    };
+    
+    // Generate left side of corridor (going forward)
+    for (let i = 0; i < validPoints.length - 1; i++) {
+      const offset = calculateOffset(validPoints[i], validPoints[i + 1], 1);
+      if (offset) {
+        corridorPoints.push(offset);
+      }
     }
     
     // Add last point offset
-    const lastIdx = points.length - 1;
-    const secondLastIdx = points.length - 2;
-    const dx = points[lastIdx][0] - points[secondLastIdx][0];
-    const dy = points[lastIdx][1] - points[secondLastIdx][1];
-    const length = Math.sqrt(dx * dx + dy * dy);
-    const perpX = -dy / length;
-    const perpY = dx / length;
-    
-    corridorPoints.push([
-      points[lastIdx][0] + perpX * widthLng,
-      points[lastIdx][1] + perpY * widthLat
-    ]);
-    
-    // Generate right side of corridor (going backward)
-    for (let i = points.length - 1; i > 0; i--) {
-      const p1 = points[i];
-      const p2 = points[i - 1];
-      
-      const dx = p1[0] - p2[0];
-      const dy = p1[1] - p2[1];
-      const length = Math.sqrt(dx * dx + dy * dy);
-      
-      // Normalize and rotate -90 degrees
-      const perpX = dy / length;
-      const perpY = -dx / length;
-      
-      // Add offset point to right side
-      corridorPoints.push([
-        p1[0] + perpX * widthLng,
-        p1[1] + perpY * widthLat
-      ]);
+    if (validPoints.length >= 2) {
+      const lastIdx = validPoints.length - 1;
+      const secondLastIdx = validPoints.length - 2;
+      const lastOffset = calculateOffset(validPoints[secondLastIdx], validPoints[lastIdx], 1);
+      if (lastOffset) {
+        const adjustedLastOffset = [
+          validPoints[lastIdx][0] + (lastOffset[0] - validPoints[secondLastIdx][0]),
+          validPoints[lastIdx][1] + (lastOffset[1] - validPoints[secondLastIdx][1])
+        ];
+        if (!isNaN(adjustedLastOffset[0]) && !isNaN(adjustedLastOffset[1])) {
+          corridorPoints.push(adjustedLastOffset);
+        }
+      }
     }
     
-    // Close the polygon
-    corridorPoints.push(corridorPoints[0]);
+    // Generate right side of corridor (going backward)
+    for (let i = validPoints.length - 1; i > 0; i--) {
+      const offset = calculateOffset(validPoints[i], validPoints[i - 1], -1);
+      if (offset) {
+        corridorPoints.push(offset);
+      }
+    }
+    
+    // Close the polygon if we have valid points
+    if (corridorPoints.length > 2) {
+      corridorPoints.push(corridorPoints[0]);
+    }
     
     return corridorPoints;
   }
@@ -23864,6 +23964,8 @@ class TrackSafetyManager {
       if (track.elements) {
         if (track.elements.trackLine) this.map.removeLayer(track.elements.trackLine);
         if (track.elements.corridor) this.map.removeLayer(track.elements.corridor);
+        if (track.elements.safeZone) this.map.removeLayer(track.elements.safeZone);
+        if (track.elements.dangerZone) this.map.removeLayer(track.elements.dangerZone);
         if (track.elements.waypoints) {
           track.elements.waypoints.forEach(marker => this.map.removeLayer(marker));
         }
@@ -23967,7 +24069,10 @@ class TrackSafetyManager {
         trackId: null,
         trackName: null,
         distanceFromTrack: Infinity,
-        isSafe: false
+        isSafe: false,
+        inSafeZone: false,
+        inDangerZone: false,
+        safetyStatus: 'off-track'
       };
     }
     
@@ -23980,13 +24085,36 @@ class TrackSafetyManager {
       
       if (trackInfo.distance < minDistance) {
         minDistance = trackInfo.distance;
+        
+        // Determine zone widths
+        const safeZoneWidth = track.safeZoneWidth || track.safetyWidth || 30;
+        const dangerZoneWidth = track.dangerZoneWidth || (track.safetyWidth * 1.5) || 50;
+        
+        // Determine safety status
+        const inSafeZone = trackInfo.distance <= safeZoneWidth;
+        const inDangerZone = trackInfo.distance <= dangerZoneWidth;
+        let safetyStatus = 'off-track';
+        
+        if (inSafeZone) {
+          safetyStatus = 'safe';
+        } else if (inDangerZone) {
+          safetyStatus = 'warning';
+        } else {
+          safetyStatus = 'danger';
+        }
+        
         closestTrackInfo = {
           trackId: track.id,
           trackName: track.name,
           distanceFromTrack: trackInfo.distance,
           closestPointIndex: trackInfo.segmentIndex,
-          isOnTrack: trackInfo.distance <= track.safetyWidth,
-          isSafe: trackInfo.distance <= track.safetyWidth
+          isOnTrack: inDangerZone, // Consider "on track" if within danger zone
+          isSafe: inSafeZone, // Only truly safe if in green zone
+          inSafeZone: inSafeZone,
+          inDangerZone: inDangerZone,
+          safetyStatus: safetyStatus,
+          safeZoneWidth: safeZoneWidth,
+          dangerZoneWidth: dangerZoneWidth
         };
       }
     });
@@ -23997,7 +24125,10 @@ class TrackSafetyManager {
         trackId: null,
         trackName: null,
         distanceFromTrack: Infinity,
-        isSafe: false
+        isSafe: false,
+        inSafeZone: false,
+        inDangerZone: false,
+        safetyStatus: 'off-track'
       };
     }
     
@@ -24124,6 +24255,7 @@ class TrackSafetyManager {
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createBaseCommand: () => (/* binding */ createBaseCommand),
 /* harmony export */   fetchHikersFromFirebase: () => (/* binding */ fetchHikersFromFirebase),
 /* harmony export */   listenForHikersUpdates: () => (/* binding */ listenForHikersUpdates),
 /* harmony export */   updateHikerActiveStatus: () => (/* binding */ updateHikerActiveStatus),
@@ -24693,6 +24825,54 @@ async function updateHikerSosStatus(hikerId, sosStatus, sosHandled = false, sosE
 }
 
 /**
+ * Create a BaseCommand entry for device communication
+ * @param {string} toDeviceId - The target device ID (e.g., "NODE_1")
+ * @param {string} fromDeviceId - The source device ID (e.g., "BASECAMP_01")
+ * @param {string} message - The message to send
+ * @returns {Promise<boolean>} Promise resolving to success status
+ */
+async function createBaseCommand(toDeviceId, fromDeviceId, message) {
+  try {
+    if (!toDeviceId || !fromDeviceId || !message) {
+      console.error('Missing required parameters for BaseCommand:', {
+        toDeviceId,
+        fromDeviceId,
+        message
+      });
+      return false;
+    }
+    
+    // Get current server timestamp
+    const currentTime = Date.now();
+    
+    // Create command object
+    const command = {
+      toDeviceID: toDeviceId,
+      fromDeviceID: fromDeviceId,
+      message: message,
+      timestamp: currentTime
+    };
+    
+    // Create unique command ID using timestamp
+    const commandId = `cmd_${currentTime}`;
+    
+    // Store command in BaseCommand path
+    const commandRef = (0,firebase_database__WEBPACK_IMPORTED_MODULE_1__.ref)(database, `BaseCommand/${commandId}`);
+    await (0,firebase_database__WEBPACK_IMPORTED_MODULE_1__.update)(commandRef, command);
+    
+    console.log(`BaseCommand created successfully:`, {
+      commandId,
+      command
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error creating BaseCommand:', error);
+    return false;
+  }
+}
+
+/**
  * Update node name in Firebase - storing it at the node level, not in logs
  * @param {string} nodeId - The ID of the node to update
  * @param {string} name - The new name for the node
@@ -24941,6 +25121,7 @@ function getStatusLucideIcon(status) {
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   TrackSafetyManager: () => (/* reexport safe */ _TrackSafetyManager_js__WEBPACK_IMPORTED_MODULE_2__["default"]),
+/* harmony export */   createBaseCommand: () => (/* reexport safe */ _firebase_js__WEBPACK_IMPORTED_MODULE_1__.createBaseCommand),
 /* harmony export */   createLucideIcon: () => (/* reexport safe */ _helpers_js__WEBPACK_IMPORTED_MODULE_0__.createLucideIcon),
 /* harmony export */   createSampleHikers: () => (/* reexport safe */ _helpers_js__WEBPACK_IMPORTED_MODULE_0__.createSampleHikers),
 /* harmony export */   createSampleTowers: () => (/* reexport safe */ _helpers_js__WEBPACK_IMPORTED_MODULE_0__.createSampleTowers),
@@ -25356,13 +25537,9 @@ class HikerTrackingApp {
       (hikerId) => {
         alert('Messaging functionality is coming soon!');
       },
-      // Mark SOS as handled callback
+      // Handle SOS callback (unified)
       (hikerId) => {
         this.handleSosAction(hikerId, 'handled');
-      },
-      // Mark emergency services dispatched callback
-      (hikerId) => {
-        this.handleSosAction(hikerId, 'emergency');
       },
       // Reset SOS callback
       (hikerId) => {
@@ -25630,11 +25807,11 @@ class HikerTrackingApp {
   }
 
   /**
-   * Handle SOS actions (marking as handled or emergency services)
+   * Handle SOS actions (unified handling or reset)
    * @param {string|number} hikerId - Hiker ID
-   * @param {string} action - Action type ('handled', 'emergency', or 'reset')
+   * @param {string} action - Action type ('handled' or 'reset')
    */
-  handleSosAction(hikerId, action) {
+  async handleSosAction(hikerId, action) {
     console.log(`SOS action requested: ${action} for hiker ${hikerId}`);
     
     const hiker = this.hikers.find(h => h.id === hikerId);
@@ -25647,16 +25824,43 @@ class HikerTrackingApp {
     let message = '';
     
     if (action === 'handled') {
-      actionTaken = hiker.markSosHandled();
-      message = `SOS for ${hiker.name} marked as handled`;
-    } else if (action === 'emergency') {
-      actionTaken = hiker.dispatchEmergencyServices();
-      message = `Emergency services dispatched for ${hiker.name}`;
+      actionTaken = hiker.handleSos();
+      message = `Help is on the way for ${hiker.name}`;
+      
+      // Create BaseCommand to notify the hiker device
+      if (actionTaken) {
+        try {
+          const { createBaseCommand } = await Promise.resolve(/*! import() */).then(__webpack_require__.bind(__webpack_require__, /*! ./utils/index.js */ "./src/utils/index.js"));
+          await createBaseCommand(
+            hikerId,           // toDeviceID (hiker device)
+            'BASECAMP_01',     // fromDeviceID (basecamp)
+            'SOS received - Help is on the way!'  // message
+          );
+          console.log(`BaseCommand created successfully for hiker ${hikerId}`);
+        } catch (error) {
+          console.error('Error creating BaseCommand:', error);
+        }
+      }
     } else if (action === 'reset') {
       console.log('Attempting to reset SOS status for hiker:', hiker);
       actionTaken = hiker.resetSosStatus();
       message = `SOS for ${hiker.name} has been cleared`;
       console.log('Reset SOS result:', actionTaken, 'New hiker state:', hiker);
+      
+      // Create BaseCommand to notify the hiker device about reset
+      if (actionTaken) {
+        try {
+          const { createBaseCommand } = await Promise.resolve(/*! import() */).then(__webpack_require__.bind(__webpack_require__, /*! ./utils/index.js */ "./src/utils/index.js"));
+          await createBaseCommand(
+            hikerId,           // toDeviceID (hiker device)
+            'BASECAMP_01',     // fromDeviceID (basecamp)
+            'SOS cleared - Status reset'  // message
+          );
+          console.log(`BaseCommand created for SOS reset of hiker ${hikerId}`);
+        } catch (error) {
+          console.error('Error creating BaseCommand for reset:', error);
+        }
+      }
     }
     
     if (actionTaken) {
@@ -25668,16 +25872,16 @@ class HikerTrackingApp {
         console.log(`Updating Firebase for ${action} action:`, {
           hikerId,
           sosActive: action !== 'reset',
-          sosHandled: action === 'handled' || action === 'emergency', 
-          emergency: action === 'emergency',
+          sosHandled: action === 'handled',
           reset: action === 'reset'
         });
         
-        (0,_utils_index_js__WEBPACK_IMPORTED_MODULE_0__.updateHikerSosStatus)(
+        const { updateHikerSosStatus } = await Promise.resolve(/*! import() */).then(__webpack_require__.bind(__webpack_require__, /*! ./utils/index.js */ "./src/utils/index.js"));
+        updateHikerSosStatus(
           hikerId, 
           action !== 'reset', // SOS is active unless resetting
-          action === 'handled' || action === 'emergency', // Whether handled
-          action === 'emergency', // Whether emergency services dispatched
+          action === 'handled', // Whether handled
+          false, // No separate emergency flag needed
           action === 'reset' // Whether to reset all SOS statuses
         ).then(() => {
           console.log(`Firebase SOS update successful for action: ${action}`);

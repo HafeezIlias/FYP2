@@ -24,8 +24,7 @@ class ModalComponent {
     this.sosStatusContainerId = 'sos-status-container';
     this.sosHandledStatusId = 'sos-handled-status';
     this.sosActionsId = 'sos-actions';
-    this.markSosHandledBtnId = 'mark-sos-handled';
-    this.markSosEmergencyBtnId = 'mark-sos-emergency';
+    this.handleSosBtnId = 'handle-sos';
     this.resetSosBtnId = 'reset-sos';
     
     this.activeHikerId = null;
@@ -37,11 +36,10 @@ class ModalComponent {
    * Initialize the modal
    * @param {Function} onTrackHiker - Callback for track hiker button
    * @param {Function} onSendMessage - Callback for send message button
-   * @param {Function} onMarkSosHandled - Callback for mark SOS handled button
-   * @param {Function} onMarkSosEmergency - Callback for emergency services button
+   * @param {Function} onHandleSos - Callback for handle SOS button
    * @param {Function} onResetSos - Callback for reset SOS button
    */
-  init(onTrackHiker, onSendMessage, onMarkSosHandled, onMarkSosEmergency, onResetSos) {
+  init(onTrackHiker, onSendMessage, onHandleSos, onResetSos) {
     // Set up close button
     document.querySelector(`#${this.modalId} .${this.closeBtnClass}`)?.addEventListener('click', () => {
       this.closeModal();
@@ -62,17 +60,10 @@ class ModalComponent {
       }
     });
     
-    // Set up SOS handling buttons
-    document.getElementById(this.markSosHandledBtnId)?.addEventListener('click', () => {
-      if (onMarkSosHandled && this.activeHiker && this.activeHiker.sos && !this.activeHiker.sosHandled) {
-        onMarkSosHandled(this.activeHikerId);
-        this.updateSosStatus(this.activeHiker);
-      }
-    });
-    
-    document.getElementById(this.markSosEmergencyBtnId)?.addEventListener('click', () => {
-      if (onMarkSosEmergency && this.activeHiker && this.activeHiker.sos && !this.activeHiker.sosEmergencyDispatched) {
-        onMarkSosEmergency(this.activeHikerId);
+    // Set up SOS handling button
+    document.getElementById(this.handleSosBtnId)?.addEventListener('click', () => {
+      if (onHandleSos && this.activeHiker && this.activeHiker.sos && !this.activeHiker.sosHandled) {
+        onHandleSos(this.activeHikerId);
         this.updateSosStatus(this.activeHiker);
       }
     });
@@ -205,8 +196,7 @@ class ModalComponent {
     const sosStatusContainer = document.getElementById(this.sosStatusContainerId);
     const sosActions = document.getElementById(this.sosActionsId);
     const sosHandledStatus = document.getElementById(this.sosHandledStatusId);
-    const markSosHandledBtn = document.getElementById(this.markSosHandledBtnId);
-    const markSosEmergencyBtn = document.getElementById(this.markSosEmergencyBtnId);
+    const handleSosBtn = document.getElementById(this.handleSosBtnId);
     const resetSosBtn = document.getElementById(this.resetSosBtnId);
     
     // Ensure all elements exist before proceeding
@@ -232,7 +222,7 @@ class ModalComponent {
       sosHandledStatus.textContent = statusText;
       
       // Update status classes
-      if (hiker.sosHandled || hiker.sosEmergencyDispatched) {
+      if (hiker.sosHandled) {
         sosHandledStatus.classList.add('handled');
         sosHandledStatus.classList.remove('pending');
       } else {
@@ -244,7 +234,7 @@ class ModalComponent {
     // Update icon if it exists
     const statusIcon = sosStatusContainer.querySelector('.detail-icon');
     if (statusIcon) {
-      if (hiker.sosHandled || hiker.sosEmergencyDispatched) {
+      if (hiker.sosHandled) {
         statusIcon.classList.add('handled');
       } else {
         statusIcon.classList.remove('handled');
@@ -252,23 +242,13 @@ class ModalComponent {
     }
     
     // Update button states if buttons exist
-    if (markSosHandledBtn) {
+    if (handleSosBtn) {
       if (hiker.sosHandled) {
-        markSosHandledBtn.classList.add('disabled');
-        markSosHandledBtn.disabled = true;
+        handleSosBtn.classList.add('disabled');
+        handleSosBtn.disabled = true;
       } else {
-        markSosHandledBtn.classList.remove('disabled');
-        markSosHandledBtn.disabled = false;
-      }
-    }
-    
-    if (markSosEmergencyBtn) {
-      if (hiker.sosEmergencyDispatched) {
-        markSosEmergencyBtn.classList.add('disabled');
-        markSosEmergencyBtn.disabled = true;
-      } else {
-        markSosEmergencyBtn.classList.remove('disabled');
-        markSosEmergencyBtn.disabled = false;
+        handleSosBtn.classList.remove('disabled');
+        handleSosBtn.disabled = false;
       }
     }
     

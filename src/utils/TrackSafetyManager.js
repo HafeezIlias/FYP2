@@ -167,10 +167,11 @@ class TrackSafetyManager {
   /**
    * Save the current track being created
    * @param {string} name - Name of the track
-   * @param {number} safetyWidth - Width of the safety corridor in meters
+   * @param {number} safeZoneWidth - Width of the safe zone in meters (green)
+   * @param {number} dangerZoneWidth - Width of the danger zone in meters (red)
    * @param {string} description - Description of the track
    */
-  saveTrack(name, safetyWidth, description = '') {
+  saveTrack(name, safeZoneWidth, dangerZoneWidth, description = '') {
     if (this.tempTrackPoints.length < 2) {
       console.warn('Cannot save track with less than 2 points');
       return false;
@@ -181,7 +182,10 @@ class TrackSafetyManager {
       id: trackId,
       name,
       description,
-      safetyWidth,
+      safeZoneWidth,
+      dangerZoneWidth,
+      // Keep legacy safetyWidth for backward compatibility
+      safetyWidth: safeZoneWidth,
       points: this.tempTrackPoints,
       createdAt: new Date().toISOString()
     };
@@ -274,6 +278,8 @@ class TrackSafetyManager {
     if (track.elements) {
       if (track.elements.trackLine) this.map.removeLayer(track.elements.trackLine);
       if (track.elements.corridor) this.map.removeLayer(track.elements.corridor);
+      if (track.elements.safeZone) this.map.removeLayer(track.elements.safeZone);
+      if (track.elements.dangerZone) this.map.removeLayer(track.elements.dangerZone);
       if (track.elements.waypoints) {
         track.elements.waypoints.forEach(marker => this.map.removeLayer(marker));
       }
@@ -284,52 +290,88 @@ class TrackSafetyManager {
       waypoints: []
     };
     
-    // Create the track polyline
+    // Determine zone widths - if track has new structure use it, otherwise use legacy
+    const safeZoneWidth = track.safeZoneWidth || track.safetyWidth || 30;
+    const dangerZoneWidth = track.dangerZoneWidth || (track.safetyWidth * 1.5) || 50;
+    
+    // Create danger zone (red - outer zone)
+    const dangerCorridorPoints = this.createCorridorPolygon(track.points, dangerZoneWidth);
+    console.log('Danger corridor points:', dangerCorridorPoints.length, dangerCorridorPoints);
+    if (dangerCorridorPoints.length > 0) {
+      try {
+        track.elements.dangerZone = L.polygon(
+          dangerCorridorPoints.map(point => [point[1], point[0]]), // Convert [lng, lat] to [lat, lng] for Leaflet
+          {
+            color: '#dc2626',
+            weight: 2,
+            opacity: 0.8,
+            fillColor: '#fca5a5',
+            fillOpacity: 0.8,
+            fill: true
+          }
+        ).addTo(this.map);
+      } catch (error) {
+        console.error('Error creating danger zone polygon:', error);
+      }
+    }
+    
+    // Create safe zone (green - inner zone)
+    const safeCorridorPoints = this.createCorridorPolygon(track.points, safeZoneWidth);
+    if (safeCorridorPoints.length > 0) {
+      try {
+        track.elements.safeZone = L.polygon(
+          safeCorridorPoints.map(point => [point[1], point[0]]), // Convert [lng, lat] to [lat, lng] for Leaflet
+          {
+            color: '#059669',
+            weight: 2,
+            opacity: 0.8,
+            fillColor: '#86efac',
+            fillOpacity: 0.8,
+            fill: true
+          }
+        ).addTo(this.map);
+      } catch (error) {
+        console.error('Error creating safe zone polygon:', error);
+      }
+    }
+    
+    // Create the track polyline (on top)
     track.elements.trackLine = L.polyline(
       track.points.map(point => [point[1], point[0]]), // Convert [lng, lat] to [lat, lng] for Leaflet
       {
-        color: '#3388ff',
+        color: '#1e40af',
         weight: 4,
-        opacity: 0.8
-      }
-    ).addTo(this.map);
-    
-    // Create a safety corridor around the track
-    const corridorPoints = this.createCorridorPolygon(track.points, track.safetyWidth);
-    
-    track.elements.corridor = L.polygon(
-      corridorPoints.map(point => [point[1], point[0]]), // Convert [lng, lat] to [lat, lng] for Leaflet
-      {
-        color: '#3388ff',
-        weight: 1,
-        opacity: 0.4,
-        fillColor: '#3388ff',
-        fillOpacity: 0.2
+        opacity: 0.9
       }
     ).addTo(this.map);
     
     // Add waypoint markers
     track.points.forEach((point, index) => {
-      // Only add markers for first, last, and every 3rd point to avoid clutter
-      if (index === 0 || index === track.points.length - 1 || index % 3 === 0) {
-        const color = index === 0 ? '#00ff00' : 
-                     index === track.points.length - 1 ? '#ff0000' : '#3388ff';
-        
-        const marker = L.circleMarker(
-          [point[1], point[0]], // Convert [lng, lat] to [lat, lng] for Leaflet
-          {
-            radius: 5,
-            fillColor: color,
-            color: '#ffffff',
-            weight: 2,
-            opacity: 1,
-            fillOpacity: 1
-          }
-        ).addTo(this.map);
-        
-        track.elements.waypoints.push(marker);
-      }
+      const waypoint = L.circleMarker(
+        [point[1], point[0]], // Convert [lng, lat] to [lat, lng] for Leaflet
+        {
+          radius: 5,
+          fillColor: '#ffffff',
+          color: '#1e40af',
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 1
+        }
+      ).addTo(this.map);
+      
+      track.elements.waypoints.push(waypoint);
     });
+    
+    // Add popup to track line with zone information
+    track.elements.trackLine.bindPopup(`
+      <div>
+        <h4>${track.name}</h4>
+        <p><strong>Safe Zone:</strong> ${safeZoneWidth}m (Green)</p>
+        <p><strong>Danger Zone:</strong> ${dangerZoneWidth}m (Red)</p>
+        <p><strong>Points:</strong> ${track.points.length} waypoints</p>
+        ${track.description ? `<p><strong>Description:</strong> ${track.description}</p>` : ''}
+      </div>
+    `);
   }
 
   /**
@@ -341,77 +383,107 @@ class TrackSafetyManager {
   createCorridorPolygon(points, widthMeters) {
     if (points.length < 2) return [];
     
+    // Validate input points
+    const validPoints = points.filter(point => {
+      const lng = parseFloat(point[0]);
+      const lat = parseFloat(point[1]);
+      return !isNaN(lng) && !isNaN(lat) && 
+             lng >= -180 && lng <= 180 && 
+             lat >= -90 && lat <= 90;
+    });
+    
+    if (validPoints.length < 2) {
+      console.warn('Not enough valid points to create corridor');
+      return [];
+    }
+    
     // Convert width from meters to approximate degrees
-    // This is a simplification and not accurate for all latitudes
-    // For a production app, you would use a proper geospatial library
-    const lat = points[0][1]; // Use the latitude of the first point
-    // Approximate conversion at this latitude (rough estimate)
+    const lat = validPoints[0][1]; // Use the latitude of the first point
+    
+    // Validate latitude for trigonometric calculations
+    if (isNaN(lat) || lat < -90 || lat > 90) {
+      console.warn('Invalid latitude for corridor calculation');
+      return [];
+    }
+    
     const metersPerDegreeLat = 111320; // approximate meters per degree latitude
     const metersPerDegreeLng = 111320 * Math.cos(lat * Math.PI / 180);
     
     const widthLat = widthMeters / metersPerDegreeLat;
     const widthLng = widthMeters / metersPerDegreeLng;
     
-    // For each segment, calculate perpendicular offset points
+    // Validate computed widths
+    if (isNaN(widthLat) || isNaN(widthLng)) {
+      console.warn('Invalid width calculations for corridor');
+      return [];
+    }
+    
     const corridorPoints = [];
     
-    // Generate left side of corridor (going forward)
-    for (let i = 0; i < points.length - 1; i++) {
-      const p1 = points[i];
-      const p2 = points[i + 1];
-      
-      // Calculate perpendicular direction (90 degrees to track direction)
+    // Helper function to calculate perpendicular offset
+    const calculateOffset = (p1, p2, direction = 1) => {
       const dx = p2[0] - p1[0];
       const dy = p2[1] - p1[1];
       const length = Math.sqrt(dx * dx + dy * dy);
       
-      // Normalize and rotate 90 degrees
-      const perpX = -dy / length;
-      const perpY = dx / length;
+      // Check for zero-length segment
+      if (length < 1e-10) {
+        return null; // Skip this segment
+      }
       
-      // Add offset point to left side
-      corridorPoints.push([
+      // Normalize and rotate 90 degrees
+      const perpX = (-dy / length) * direction;
+      const perpY = (dx / length) * direction;
+      
+      const offsetPoint = [
         p1[0] + perpX * widthLng,
         p1[1] + perpY * widthLat
-      ]);
+      ];
+      
+      // Validate output coordinates
+      if (isNaN(offsetPoint[0]) || isNaN(offsetPoint[1])) {
+        return null;
+      }
+      
+      return offsetPoint;
+    };
+    
+    // Generate left side of corridor (going forward)
+    for (let i = 0; i < validPoints.length - 1; i++) {
+      const offset = calculateOffset(validPoints[i], validPoints[i + 1], 1);
+      if (offset) {
+        corridorPoints.push(offset);
+      }
     }
     
     // Add last point offset
-    const lastIdx = points.length - 1;
-    const secondLastIdx = points.length - 2;
-    const dx = points[lastIdx][0] - points[secondLastIdx][0];
-    const dy = points[lastIdx][1] - points[secondLastIdx][1];
-    const length = Math.sqrt(dx * dx + dy * dy);
-    const perpX = -dy / length;
-    const perpY = dx / length;
-    
-    corridorPoints.push([
-      points[lastIdx][0] + perpX * widthLng,
-      points[lastIdx][1] + perpY * widthLat
-    ]);
-    
-    // Generate right side of corridor (going backward)
-    for (let i = points.length - 1; i > 0; i--) {
-      const p1 = points[i];
-      const p2 = points[i - 1];
-      
-      const dx = p1[0] - p2[0];
-      const dy = p1[1] - p2[1];
-      const length = Math.sqrt(dx * dx + dy * dy);
-      
-      // Normalize and rotate -90 degrees
-      const perpX = dy / length;
-      const perpY = -dx / length;
-      
-      // Add offset point to right side
-      corridorPoints.push([
-        p1[0] + perpX * widthLng,
-        p1[1] + perpY * widthLat
-      ]);
+    if (validPoints.length >= 2) {
+      const lastIdx = validPoints.length - 1;
+      const secondLastIdx = validPoints.length - 2;
+      const lastOffset = calculateOffset(validPoints[secondLastIdx], validPoints[lastIdx], 1);
+      if (lastOffset) {
+        const adjustedLastOffset = [
+          validPoints[lastIdx][0] + (lastOffset[0] - validPoints[secondLastIdx][0]),
+          validPoints[lastIdx][1] + (lastOffset[1] - validPoints[secondLastIdx][1])
+        ];
+        if (!isNaN(adjustedLastOffset[0]) && !isNaN(adjustedLastOffset[1])) {
+          corridorPoints.push(adjustedLastOffset);
+        }
+      }
     }
     
-    // Close the polygon
-    corridorPoints.push(corridorPoints[0]);
+    // Generate right side of corridor (going backward)
+    for (let i = validPoints.length - 1; i > 0; i--) {
+      const offset = calculateOffset(validPoints[i], validPoints[i - 1], -1);
+      if (offset) {
+        corridorPoints.push(offset);
+      }
+    }
+    
+    // Close the polygon if we have valid points
+    if (corridorPoints.length > 2) {
+      corridorPoints.push(corridorPoints[0]);
+    }
     
     return corridorPoints;
   }
@@ -441,6 +513,8 @@ class TrackSafetyManager {
       if (track.elements) {
         if (track.elements.trackLine) this.map.removeLayer(track.elements.trackLine);
         if (track.elements.corridor) this.map.removeLayer(track.elements.corridor);
+        if (track.elements.safeZone) this.map.removeLayer(track.elements.safeZone);
+        if (track.elements.dangerZone) this.map.removeLayer(track.elements.dangerZone);
         if (track.elements.waypoints) {
           track.elements.waypoints.forEach(marker => this.map.removeLayer(marker));
         }
@@ -544,7 +618,10 @@ class TrackSafetyManager {
         trackId: null,
         trackName: null,
         distanceFromTrack: Infinity,
-        isSafe: false
+        isSafe: false,
+        inSafeZone: false,
+        inDangerZone: false,
+        safetyStatus: 'off-track'
       };
     }
     
@@ -557,13 +634,36 @@ class TrackSafetyManager {
       
       if (trackInfo.distance < minDistance) {
         minDistance = trackInfo.distance;
+        
+        // Determine zone widths
+        const safeZoneWidth = track.safeZoneWidth || track.safetyWidth || 30;
+        const dangerZoneWidth = track.dangerZoneWidth || (track.safetyWidth * 1.5) || 50;
+        
+        // Determine safety status
+        const inSafeZone = trackInfo.distance <= safeZoneWidth;
+        const inDangerZone = trackInfo.distance <= dangerZoneWidth;
+        let safetyStatus = 'off-track';
+        
+        if (inSafeZone) {
+          safetyStatus = 'safe';
+        } else if (inDangerZone) {
+          safetyStatus = 'warning';
+        } else {
+          safetyStatus = 'danger';
+        }
+        
         closestTrackInfo = {
           trackId: track.id,
           trackName: track.name,
           distanceFromTrack: trackInfo.distance,
           closestPointIndex: trackInfo.segmentIndex,
-          isOnTrack: trackInfo.distance <= track.safetyWidth,
-          isSafe: trackInfo.distance <= track.safetyWidth
+          isOnTrack: inDangerZone, // Consider "on track" if within danger zone
+          isSafe: inSafeZone, // Only truly safe if in green zone
+          inSafeZone: inSafeZone,
+          inDangerZone: inDangerZone,
+          safetyStatus: safetyStatus,
+          safeZoneWidth: safeZoneWidth,
+          dangerZoneWidth: dangerZoneWidth
         };
       }
     });
@@ -574,7 +674,10 @@ class TrackSafetyManager {
         trackId: null,
         trackName: null,
         distanceFromTrack: Infinity,
-        isSafe: false
+        isSafe: false,
+        inSafeZone: false,
+        inDangerZone: false,
+        safetyStatus: 'off-track'
       };
     }
     

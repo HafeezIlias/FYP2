@@ -136,13 +136,9 @@ class HikerTrackingApp {
       (hikerId) => {
         alert('Messaging functionality is coming soon!');
       },
-      // Mark SOS as handled callback
+      // Handle SOS callback (unified)
       (hikerId) => {
         this.handleSosAction(hikerId, 'handled');
-      },
-      // Mark emergency services dispatched callback
-      (hikerId) => {
-        this.handleSosAction(hikerId, 'emergency');
       },
       // Reset SOS callback
       (hikerId) => {
@@ -410,11 +406,11 @@ class HikerTrackingApp {
   }
 
   /**
-   * Handle SOS actions (marking as handled or emergency services)
+   * Handle SOS actions (unified handling or reset)
    * @param {string|number} hikerId - Hiker ID
-   * @param {string} action - Action type ('handled', 'emergency', or 'reset')
+   * @param {string} action - Action type ('handled' or 'reset')
    */
-  handleSosAction(hikerId, action) {
+  async handleSosAction(hikerId, action) {
     console.log(`SOS action requested: ${action} for hiker ${hikerId}`);
     
     const hiker = this.hikers.find(h => h.id === hikerId);
@@ -427,16 +423,43 @@ class HikerTrackingApp {
     let message = '';
     
     if (action === 'handled') {
-      actionTaken = hiker.markSosHandled();
-      message = `SOS for ${hiker.name} marked as handled`;
-    } else if (action === 'emergency') {
-      actionTaken = hiker.dispatchEmergencyServices();
-      message = `Emergency services dispatched for ${hiker.name}`;
+      actionTaken = hiker.handleSos();
+      message = `Help is on the way for ${hiker.name}`;
+      
+      // Create BaseCommand to notify the hiker device
+      if (actionTaken) {
+        try {
+          const { createBaseCommand } = await import('./utils/index.js');
+          await createBaseCommand(
+            hikerId,           // toDeviceID (hiker device)
+            'BASECAMP_01',     // fromDeviceID (basecamp)
+            'SOS received - Help is on the way!'  // message
+          );
+          console.log(`BaseCommand created successfully for hiker ${hikerId}`);
+        } catch (error) {
+          console.error('Error creating BaseCommand:', error);
+        }
+      }
     } else if (action === 'reset') {
       console.log('Attempting to reset SOS status for hiker:', hiker);
       actionTaken = hiker.resetSosStatus();
       message = `SOS for ${hiker.name} has been cleared`;
       console.log('Reset SOS result:', actionTaken, 'New hiker state:', hiker);
+      
+      // Create BaseCommand to notify the hiker device about reset
+      if (actionTaken) {
+        try {
+          const { createBaseCommand } = await import('./utils/index.js');
+          await createBaseCommand(
+            hikerId,           // toDeviceID (hiker device)
+            'BASECAMP_01',     // fromDeviceID (basecamp)
+            'SOS cleared - Status reset'  // message
+          );
+          console.log(`BaseCommand created for SOS reset of hiker ${hikerId}`);
+        } catch (error) {
+          console.error('Error creating BaseCommand for reset:', error);
+        }
+      }
     }
     
     if (actionTaken) {
@@ -448,16 +471,16 @@ class HikerTrackingApp {
         console.log(`Updating Firebase for ${action} action:`, {
           hikerId,
           sosActive: action !== 'reset',
-          sosHandled: action === 'handled' || action === 'emergency', 
-          emergency: action === 'emergency',
+          sosHandled: action === 'handled',
           reset: action === 'reset'
         });
         
+        const { updateHikerSosStatus } = await import('./utils/index.js');
         updateHikerSosStatus(
           hikerId, 
           action !== 'reset', // SOS is active unless resetting
-          action === 'handled' || action === 'emergency', // Whether handled
-          action === 'emergency', // Whether emergency services dispatched
+          action === 'handled', // Whether handled
+          false, // No separate emergency flag needed
           action === 'reset' // Whether to reset all SOS statuses
         ).then(() => {
           console.log(`Firebase SOS update successful for action: ${action}`);

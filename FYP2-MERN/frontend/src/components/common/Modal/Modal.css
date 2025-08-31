@@ -1,0 +1,156 @@
+/* Modal Overlay */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  box-sizing: border-box;
+  backdrop-filter: blur(4px);
+}
+
+/* Modal Content */
+.modal__content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+/* Modal Sizes */
+.modal__content--sm {
+  width: 100%;
+  max-width: 400px;
+}
+
+.modal__content--md {
+  width: 100%;
+  max-width: 500px;
+}
+
+.modal__content--lg {
+  width: 100%;
+  max-width: 700px;
+}
+
+.modal__content--xl {
+  width: 100%;
+  max-width: 900px;
+}
+
+/* Modal Header */
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #E2E8F0;
+  background: #F7FAFC;
+  flex-shrink: 0;
+}
+
+.modal__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #2D3748;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal__close {
+  border: none;
+  background: none;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.modal__close:hover {
+  background: #E2E8F0;
+}
+
+/* Modal Body */
+.modal__body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Animation */
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .modal {
+    padding: 10px;
+  }
+  
+  .modal__content {
+    max-height: 95vh;
+  }
+  
+  .modal__content--sm,
+  .modal__content--md,
+  .modal__content--lg,
+  .modal__content--xl {
+    max-width: 100%;
+  }
+  
+  .modal__header {
+    padding: 16px 20px;
+  }
+  
+  .modal__body {
+    padding: 20px;
+  }
+  
+  .modal__title {
+    font-size: 18px;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .modal__content {
+    background: #2D3748;
+    color: #F7FAFC;
+  }
+  
+  .modal__header {
+    background: #4A5568;
+    border-bottom-color: #4A5568;
+  }
+  
+  .modal__title {
+    color: #F7FAFC;
+  }
+  
+  .modal__close:hover {
+    background: #4A5568;
+  }
+}

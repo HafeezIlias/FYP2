@@ -1,0 +1,376 @@
+/* Main App Styles - Matching Original Design */
+
+/* App Container */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--gray-50);
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Header */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: white;
+  border-bottom: 1px solid var(--gray-200);
+  box-shadow: var(--shadow-sm);
+}
+
+.app-header__title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.app-header__title h1 {
+  margin: 0;
+  font-size: 24px;
+  color: var(--gray-700);
+}
+
+/* Layout */
+.app-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.app-sidebar {
+  width: 380px;
+  background: white;
+  border-right: 1px solid var(--gray-200);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-search {
+  padding: 20px;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.app-search__input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.app-search__input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+/* Tabs */
+.app-tabs {
+  display: flex;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.app-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 12px;
+  border: none;
+  background: transparent;
+  color: var(--gray-500);
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s ease;
+  font-family: 'Poppins', sans-serif;
+}
+
+.app-tab:hover {
+  color: var(--gray-700);
+  background: var(--gray-50);
+}
+
+.app-tab--active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+  background: rgba(66, 153, 225, 0.05);
+}
+
+/* Stats */
+.app-stats {
+  padding: 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Sidebar Content */
+.app-sidebar-content {
+  flex: 1;
+  overflow: auto;
+  padding: 20px;
+}
+
+.app-hiker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.app-hiker-item {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.app-hiker-item:hover {
+  transform: translateY(-2px);
+}
+
+.app-empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--gray-500);
+}
+
+/* Main Content */
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.app-sos-alerts {
+  background: rgba(229, 62, 62, 0.05);
+  border-bottom: 1px solid rgba(229, 62, 62, 0.1);
+  padding: 16px 20px;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.app-map {
+  flex: 1;
+  padding: 20px;
+  overflow: hidden;
+}
+
+/* Settings */
+.app-settings {
+  padding: 20px;
+  text-align: center;
+  color: var(--gray-600);
+}
+
+/* Loading States */
+.app-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 24px;
+  color: var(--gray-600);
+}
+
+.app-loading .loading-spinner {
+  width: 40px;
+  height: 40px;
+  border-width: 4px;
+  border-color: var(--primary-color);
+  border-top-color: transparent;
+}
+
+.app-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 24px;
+  text-align: center;
+  padding: 40px;
+}
+
+.app-error h2 {
+  color: var(--danger-color);
+  margin-bottom: 12px;
+}
+
+.app-error p {
+  color: var(--gray-600);
+  max-width: 400px;
+  margin-bottom: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .app-sidebar {
+    width: 320px;
+  }
+  
+  .app-header {
+    padding: 16px 20px;
+  }
+  
+  .app-sidebar-content {
+    padding: 16px;
+  }
+  
+  .app-map {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-layout {
+    flex-direction: column;
+  }
+  
+  .app-sidebar {
+    width: 100%;
+    max-height: 50vh;
+    border-right: none;
+    border-bottom: 1px solid var(--gray-200);
+  }
+  
+  .app-header__title h1 {
+    font-size: 20px;
+  }
+  
+  .app-search {
+    padding: 16px;
+  }
+  
+  .app-stats {
+    padding: 16px;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .app-tab {
+    padding: 12px 8px;
+    font-size: 13px;
+  }
+  
+  .app-map {
+    padding: 12px;
+  }
+  
+  .app-sos-alerts {
+    padding: 12px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-header {
+    padding: 12px 16px;
+  }
+  
+  .app-header__title {
+    gap: 8px;
+  }
+  
+  .app-header__title h1 {
+    font-size: 18px;
+  }
+  
+  .app-search {
+    padding: 12px;
+  }
+  
+  .app-search__input {
+    padding: 10px 12px;
+  }
+  
+  .app-tab {
+    padding: 10px 6px;
+    font-size: 12px;
+  }
+  
+  .app-stats {
+    padding: 12px;
+  }
+  
+  .app-map {
+    padding: 8px;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .app {
+    background: var(--gray-100);
+  }
+  
+  .app-header {
+    background: var(--gray-200);
+    border-bottom-color: var(--gray-300);
+  }
+  
+  .app-header__title h1 {
+    color: var(--gray-800);
+  }
+  
+  .app-sidebar {
+    background: var(--gray-200);
+    border-right-color: var(--gray-300);
+  }
+  
+  .app-search {
+    border-bottom-color: var(--gray-300);
+  }
+  
+  .app-search__input {
+    background: var(--gray-300);
+    border-color: var(--gray-400);
+    color: var(--gray-800);
+  }
+  
+  .app-tabs {
+    border-bottom-color: var(--gray-300);
+  }
+  
+  .app-tab:hover {
+    background: var(--gray-300);
+  }
+  
+  .app-empty-state {
+    color: var(--gray-400);
+  }
+  
+  .app-loading {
+    color: var(--gray-400);
+  }
+  
+  .app-settings {
+    color: var(--gray-400);
+  }
+}
+
+/* Print Styles */
+@media print {
+  .app-header,
+  .app-sidebar {
+    display: none;
+  }
+  
+  .app-layout {
+    flex-direction: column;
+  }
+  
+  .app-main {
+    flex: none;
+    height: auto;
+  }
+}

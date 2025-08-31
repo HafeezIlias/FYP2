@@ -558,6 +558,54 @@ export async function updateHikerSosStatus(hikerId, sosStatus, sosHandled = fals
 }
 
 /**
+ * Create a BaseCommand entry for device communication
+ * @param {string} toDeviceId - The target device ID (e.g., "NODE_1")
+ * @param {string} fromDeviceId - The source device ID (e.g., "BASECAMP_01")
+ * @param {string} message - The message to send
+ * @returns {Promise<boolean>} Promise resolving to success status
+ */
+export async function createBaseCommand(toDeviceId, fromDeviceId, message) {
+  try {
+    if (!toDeviceId || !fromDeviceId || !message) {
+      console.error('Missing required parameters for BaseCommand:', {
+        toDeviceId,
+        fromDeviceId,
+        message
+      });
+      return false;
+    }
+    
+    // Get current server timestamp
+    const currentTime = Date.now();
+    
+    // Create command object
+    const command = {
+      toDeviceID: toDeviceId,
+      fromDeviceID: fromDeviceId,
+      message: message,
+      timestamp: currentTime
+    };
+    
+    // Create unique command ID using timestamp
+    const commandId = `cmd_${currentTime}`;
+    
+    // Store command in BaseCommand path
+    const commandRef = ref(database, `BaseCommand/${commandId}`);
+    await update(commandRef, command);
+    
+    console.log(`BaseCommand created successfully:`, {
+      commandId,
+      command
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error creating BaseCommand:', error);
+    return false;
+  }
+}
+
+/**
  * Update node name in Firebase - storing it at the node level, not in logs
  * @param {string} nodeId - The ID of the node to update
  * @param {string} name - The new name for the node

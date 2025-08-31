@@ -1,0 +1,287 @@
+/* HikerTracker Base Styles */
+.hiker-tracker {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+  padding: 16px;
+  transition: all 0.2s ease;
+  font-family: 'Poppins', sans-serif;
+}
+
+.hiker-tracker:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+/* SOS State */
+.hiker-tracker--sos {
+  border-color: #FEB2B2;
+  background: linear-gradient(135deg, #fff 0%, #FED7D7 100%);
+  animation: sosGlow 2s infinite alternate;
+}
+
+@keyframes sosGlow {
+  0% { box-shadow: 0 0 10px rgba(229, 62, 62, 0.3); }
+  100% { box-shadow: 0 0 20px rgba(229, 62, 62, 0.6); }
+}
+
+/* Header */
+.hiker-tracker__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.hiker-tracker__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #4299E1;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.hiker-tracker__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.hiker-tracker__name {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #2D3748;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hiker-tracker__status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hiker-tracker__status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.hiker-tracker__status-text {
+  font-size: 14px;
+  color: #718096;
+  font-weight: 500;
+}
+
+/* Details */
+.hiker-tracker__details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.hiker-tracker__detail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.hiker-tracker__icon {
+  color: #718096;
+  flex-shrink: 0;
+}
+
+.hiker-tracker__value {
+  color: #4A5568;
+  font-weight: 500;
+  flex: 1;
+}
+
+/* Battery Bar */
+.hiker-tracker__battery-bar {
+  width: 60px;
+  height: 6px;
+  background: #E2E8F0;
+  border-radius: 3px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.hiker-tracker__battery-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: all 0.3s ease;
+}
+
+/* SOS Alert */
+.hiker-tracker__sos {
+  background: #FED7D7;
+  border: 1px solid #FEB2B2;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.hiker-tracker__sos-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #E53E3E;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.hiker-tracker__sos-status {
+  color: #742A2A;
+  font-size: 13px;
+  font-weight: 500;
+  margin: 0 0 4px 0;
+}
+
+.hiker-tracker__sos-time {
+  color: #A0AEC0;
+  font-size: 12px;
+  margin: 0;
+}
+
+/* Actions */
+.hiker-tracker__actions {
+  border-top: 1px solid #E2E8F0;
+  padding-top: 16px;
+}
+
+.hiker-tracker__sos-actions,
+.hiker-tracker__normal-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.hiker-tracker__action {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Compact Variant */
+.hiker-tracker--compact {
+  padding: 12px;
+}
+
+.hiker-tracker--compact .hiker-tracker__header {
+  margin-bottom: 0;
+}
+
+.hiker-tracker--compact .hiker-tracker__avatar {
+  width: 32px;
+  height: 32px;
+}
+
+.hiker-tracker--compact .hiker-tracker__name {
+  font-size: 14px;
+}
+
+.hiker-tracker--compact .hiker-tracker__status-text {
+  font-size: 12px;
+}
+
+.hiker-tracker--compact .hiker-tracker__sos {
+  margin-bottom: 0;
+  padding: 8px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .hiker-tracker {
+    padding: 14px;
+  }
+  
+  .hiker-tracker__header {
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  
+  .hiker-tracker__avatar {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .hiker-tracker__name {
+    font-size: 15px;
+  }
+  
+  .hiker-tracker__status-text {
+    font-size: 13px;
+  }
+  
+  .hiker-tracker__details {
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  
+  .hiker-tracker__detail {
+    font-size: 13px;
+  }
+  
+  .hiker-tracker__battery-bar {
+    width: 50px;
+    height: 5px;
+  }
+  
+  .hiker-tracker__actions {
+    padding-top: 14px;
+  }
+  
+  .hiker-tracker__action {
+    font-size: 13px;
+  }
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+  .hiker-tracker {
+    background: #2D3748;
+    border-color: #4A5568;
+  }
+  
+  .hiker-tracker__name {
+    color: #F7FAFC;
+  }
+  
+  .hiker-tracker__status-text {
+    color: #A0AEC0;
+  }
+  
+  .hiker-tracker__icon {
+    color: #A0AEC0;
+  }
+  
+  .hiker-tracker__value {
+    color: #CBD5E0;
+  }
+  
+  .hiker-tracker__battery-bar {
+    background: #4A5568;
+  }
+  
+  .hiker-tracker__actions {
+    border-top-color: #4A5568;
+  }
+  
+  .hiker-tracker--sos {
+    background: linear-gradient(135deg, #2D3748 0%, #3C2626 100%);
+  }
+  
+  .hiker-tracker__sos {
+    background: #3C2626;
+    border-color: #742A2A;
+  }
+}

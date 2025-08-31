@@ -1,0 +1,279 @@
+/* MapView Container */
+.map-view {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.map-view__container {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+}
+
+/* Map Controls */
+.map-controls {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1000;
+}
+
+.map-controls .btn {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+}
+
+/* Custom Hiker Markers */
+.custom-hiker-marker {
+  position: relative;
+}
+
+.hiker-marker {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hiker-marker__icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+  border: 2px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 2;
+}
+
+.hiker-marker__pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.3;
+  transform: translate(-50%, -50%);
+  animation: pulse 2s infinite;
+  z-index: 1;
+}
+
+/* Tracking state */
+.hiker-marker--tracking .hiker-marker__icon {
+  border-color: #FFD700;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+}
+
+.hiker-marker--tracking .hiker-marker__pulse {
+  animation: trackingPulse 1s infinite;
+  opacity: 0.5;
+}
+
+/* SOS state */
+.hiker-marker--sos .hiker-marker__icon {
+  animation: sosFlash 0.8s infinite alternate;
+}
+
+.hiker-marker--sos .hiker-marker__pulse {
+  animation: sosPulse 1s infinite;
+  opacity: 0.6;
+}
+
+/* Custom Tower Markers */
+.custom-tower-marker {
+  position: relative;
+}
+
+.tower-marker {
+  position: relative;
+  width: 25px;
+  height: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tower-marker__icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 10px;
+  border: 1px solid white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Map Popups */
+.map-popup {
+  min-width: 200px;
+}
+
+.map-popup__title {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #2D3748;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.map-popup__content {
+  font-size: 14px;
+}
+
+.map-popup__content p {
+  margin: 4px 0;
+  color: #4A5568;
+}
+
+.map-popup__sos {
+  color: #E53E3E !important;
+  font-weight: 600;
+}
+
+/* Animations */
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.1);
+    opacity: 0.1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0.3;
+  }
+}
+
+@keyframes trackingPulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.3);
+    opacity: 0;
+  }
+}
+
+@keyframes sosPulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes sosFlash {
+  0% {
+    box-shadow: 0 0 15px rgba(229, 62, 62, 0.8);
+  }
+  100% {
+    box-shadow: 0 0 25px rgba(229, 62, 62, 0.4);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .map-controls {
+    bottom: 16px;
+    right: 16px;
+  }
+  
+  .hiker-marker {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .hiker-marker__icon {
+    width: 22px;
+    height: 22px;
+    font-size: 11px;
+  }
+  
+  .tower-marker {
+    width: 23px;
+    height: 23px;
+  }
+  
+  .tower-marker__icon {
+    width: 18px;
+    height: 18px;
+    font-size: 9px;
+  }
+  
+  .map-popup {
+    min-width: 180px;
+  }
+  
+  .map-popup__title {
+    font-size: 15px;
+  }
+  
+  .map-popup__content {
+    font-size: 13px;
+  }
+}
+
+/* Override Leaflet popup styles */
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  border: 1px solid #E2E8F0;
+}
+
+.leaflet-popup-content {
+  margin: 16px;
+  font-family: 'Poppins', sans-serif;
+}
+
+.leaflet-popup-tip {
+  box-shadow: none;
+  border: 1px solid #E2E8F0;
+  border-top: none;
+  border-left: none;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .map-popup__title {
+    color: #F7FAFC;
+  }
+  
+  .map-popup__content p {
+    color: #A0AEC0;
+  }
+  
+  .leaflet-popup-content-wrapper {
+    background: #2D3748;
+    border-color: #4A5568;
+  }
+  
+  .leaflet-popup-tip {
+    border-color: #4A5568;
+  }
+}
