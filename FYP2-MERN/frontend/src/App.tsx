@@ -108,7 +108,7 @@ function App() {
       console.log('Loading towers from Firebase...');
       
       // Set up Firebase real-time listener for towers
-      const unsubscribeTowers = firebaseService.listenForTowerUpdates((updatedTowers) => {
+      const unsubscribeTowers = firebaseService.listenForTowerUpdates((updatedTowers: Tower[]) => {
         console.log('Received tower updates:', updatedTowers);
         setTowers(updatedTowers);
       });
@@ -216,7 +216,7 @@ function App() {
       await socketService.connect();
       
       // Set up Firebase real-time listener
-      const unsubscribe = firebaseService.listenForHikerUpdates((updatedHikers) => {
+      const unsubscribe = firebaseService.listenForHikerUpdates((updatedHikers: Hiker[]) => {
         if (!appSettings.simulation.enabled) { // Only update if not in simulation mode
           console.log('Received hiker updates:', updatedHikers);
           setHikers(updatedHikers as Hiker[]);
@@ -413,7 +413,7 @@ function App() {
       console.log('Loading safety tracks from Firebase...');
       
       // Set up Firebase real-time listener for tracks
-      const unsubscribeTracks = firebaseService.listenForSafetyTrackUpdates((updatedTracks) => {
+      const unsubscribeTracks = firebaseService.listenForSafetyTrackUpdates((updatedTracks: SafetyTrack[]) => {
         console.log('Received safety track updates:', updatedTracks);
         // Update the safety track service
         safetyTrackService.setTracks(updatedTracks);
