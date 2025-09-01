@@ -12,6 +12,7 @@ import { socketService } from './services/socket';
 import { authService } from './services/auth';
 import { simulationService } from './services/simulation';
 import { safetyTrackService } from './services/safetyTracks';
+import { hikerHistoryService } from './services/hikerHistory';
 import { Hiker, Tower, AppSettings } from './types';
 import { Hiker as HikerModel } from './models/Hiker';
 import './styles/globals.css';
@@ -31,6 +32,7 @@ function App() {
   // UI State
   const [selectedHiker, setSelectedHiker] = useState<Hiker | null>(null);
   const [trackingHikerId, setTrackingHikerId] = useState<string | null>(null);
+  const [showTrackHistory, setShowTrackHistory] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   
   // App Settings
@@ -232,6 +234,13 @@ function App() {
     }
   }, [hikers, appSettings.safety.enabled, appSettings.notifications.trackDeviationThreshold]);
 
+  // Track hiker movements for history
+  useEffect(() => {
+    hikers.forEach(hiker => {
+      hikerHistoryService.addTrackPoint(hiker.id, hiker.name, hiker.lat, hiker.lon, hiker.lastUpdate);
+    });
+  }, [hikers]);
+
   // Initialize app
   useEffect(() => {
     initializeLiveData();
@@ -312,6 +321,11 @@ function App() {
     } catch (error) {
       console.error('Error handling SOS action:', error);
     }
+  };
+
+  // Handle track history toggle
+  const handleToggleTrackHistory = (hikerId: string) => {
+    setShowTrackHistory(showTrackHistory === hikerId ? null : hikerId);
   };
 
   // Get SOS hikers
@@ -397,6 +411,11 @@ function App() {
               showSafetyTracks={appSettings.safety.enabled}
               highlightUnsafeHikers={appSettings.safety.highlightUnsafeHikers}
               unsafeHikerIds={unsafeHikers.map(u => u.hiker.id)}
+              hikerTrackHistory={showTrackHistory ? {
+                hikerId: showTrackHistory,
+                trackPoints: hikerHistoryService.getHikerTrackHistory(showTrackHistory)?.trackPoints || []
+              } : null}
+              showTrackHistory={showTrackHistory !== null}
             />
           </div>
         </main>
@@ -416,6 +435,7 @@ function App() {
             onMessage={() => console.log('Message hiker:', selectedHiker.id)}
             onSosHandle={() => handleSosAction(selectedHiker.id, 'handle')}
             onSosReset={() => handleSosAction(selectedHiker.id, 'reset')}
+            onShowTrackHistory={() => handleToggleTrackHistory(selectedHiker.id)}
           />
         )}
       </Modal>

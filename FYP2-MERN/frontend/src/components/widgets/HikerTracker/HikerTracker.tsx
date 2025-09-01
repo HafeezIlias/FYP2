@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, MapPin, Battery, Clock, AlertTriangle } from 'lucide-react';
+import { User, MapPin, Battery, Clock, AlertTriangle, Route } from 'lucide-react';
 import { Hiker } from '../../../types';
 import { Button } from '../../common/Button';
 import { getSosStatusText } from '../../../utils/hikerUtils';
@@ -11,6 +11,7 @@ interface HikerTrackerProps {
   onMessage?: () => void;
   onSosHandle?: () => void;
   onSosReset?: () => void;
+  onShowTrackHistory?: () => void;
   showActions?: boolean;
   compact?: boolean;
   className?: string;
@@ -22,6 +23,7 @@ export const HikerTracker: React.FC<HikerTrackerProps> = ({
   onMessage,
   onSosHandle,
   onSosReset,
+  onShowTrackHistory,
   showActions = true,
   compact = false,
   className = ''
@@ -216,6 +218,17 @@ export const HikerTracker: React.FC<HikerTrackerProps> = ({
                   className="hiker-tracker__action"
                 >
                   Message
+                </Button>
+              )}
+              {onShowTrackHistory && (
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={onShowTrackHistory}
+                  className="hiker-tracker__action"
+                >
+                  <Route size={14} />
+                  Track History
                 </Button>
               )}
             </div>

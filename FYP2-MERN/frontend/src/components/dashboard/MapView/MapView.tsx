@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import { Crosshair, Users } from 'lucide-react';
-import { Hiker, Tower, SafetyTrack } from '../../../types';
+import { Hiker, Tower, SafetyTrack, TrackPoint } from '../../../types';
 import { Button } from '../../common/Button';
 import { getSosStatusText } from '../../../utils/hikerUtils';
 import './MapView.css';
@@ -28,6 +28,8 @@ interface MapViewProps {
   showSafetyTracks?: boolean;
   highlightUnsafeHikers?: boolean;
   unsafeHikerIds?: string[];
+  hikerTrackHistory?: { hikerId: string; trackPoints: TrackPoint[] } | null;
+  showTrackHistory?: boolean;
   className?: string;
 }
 
@@ -52,6 +54,8 @@ export const MapView: React.FC<MapViewProps> = ({
   showSafetyTracks = false,
   highlightUnsafeHikers = false,
   unsafeHikerIds = [],
+  hikerTrackHistory = null,
+  showTrackHistory = false,
   className = ''
 }) => {
   const mapRef = useRef<any>(null);
@@ -258,6 +262,31 @@ export const MapView: React.FC<MapViewProps> = ({
             </Polyline>
           );
         })}
+        
+        {/* Render hiker track history */}
+        {showTrackHistory && hikerTrackHistory && hikerTrackHistory.trackPoints.length > 1 && (
+          <Polyline
+            key={`history-${hikerTrackHistory.hikerId}`}
+            positions={hikerTrackHistory.trackPoints.map(point => [point.lat, point.lon])}
+            pathOptions={{
+              color: '#FF6B6B', // Distinctive red color for history
+              weight: 4,
+              opacity: 0.8,
+              dashArray: '5, 10' // Dashed line to differentiate from safety tracks
+            }}
+          >
+            <Popup>
+              <div className="map-popup">
+                <h4 className="map-popup__title">Track History</h4>
+                <div className="map-popup__content">
+                  <p><strong>Points:</strong> {hikerTrackHistory.trackPoints.length}</p>
+                  <p><strong>Start:</strong> {new Date(hikerTrackHistory.trackPoints[0].timestamp).toLocaleString()}</p>
+                  <p><strong>End:</strong> {new Date(hikerTrackHistory.trackPoints[hikerTrackHistory.trackPoints.length - 1].timestamp).toLocaleString()}</p>
+                </div>
+              </div>
+            </Popup>
+          </Polyline>
+        )}
       </MapContainer>
 
       {/* Map Controls */}

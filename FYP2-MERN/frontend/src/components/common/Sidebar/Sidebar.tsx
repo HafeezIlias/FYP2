@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mountain, Users, RadioTower, AlertTriangle, Battery } from 'lucide-react';
+import { Users, RadioTower, AlertTriangle, Battery } from 'lucide-react';
 import { Hiker, Tower } from '../../../types';
 import { SearchBox } from '../SearchBox';
 import { StatCard } from '../StatCard';
@@ -51,14 +51,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside className={sidebarClasses}>
-      {/* Header */}
-      <div className="sidebar__header">
-        <div className="sidebar__title">
-          <Mountain size={24} />
-          <h2>Hiker Tracker</h2>
-        </div>
-      </div>
-
       {/* Search */}
       <div className="sidebar__search">
         <SearchBox
