@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Mountain, Settings } from 'lucide-react';
+import { Mountain, Settings, Radio } from 'lucide-react';
 import { MapView } from './components/dashboard/MapView';
 import { HikerTracker } from './components/widgets/HikerTracker';
 import { SOSAlert } from './components/widgets/SOSAlert';
@@ -7,6 +7,7 @@ import { Button } from './components/common/Button';
 import { Modal } from './components/common/Modal';
 import { Sidebar } from './components/common/Sidebar';
 import { Settings as SettingsModal } from './components/dashboard/Settings';
+import { TowerManager } from './components/dashboard/TowerManager/TowerManager';
 import { firebaseService } from './services/firebase';
 import { socketService } from './services/socket';
 import { authService } from './services/auth';
@@ -34,6 +35,7 @@ function App() {
   const [trackingHikerId, setTrackingHikerId] = useState<string | null>(null);
   const [showTrackHistory, setShowTrackHistory] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [towerManagerOpen, setTowerManagerOpen] = useState(false);
   
   // App Settings
   const [appSettings, setAppSettings] = useState<AppSettings>({
@@ -91,45 +93,40 @@ function App() {
     }
   }, []);
 
-  // Initialize towers data
+  // Initialize towers data from Firebase (only when not in simulation mode)
   useEffect(() => {
-    const sampleTowers: Tower[] = [
-      {
-        id: 'tower_001',
-        name: 'Main Communication Tower',
-        type: 'Tower',
-        lat: 3.140,
-        lon: 101.687,
-        status: 'Active',
-        coverageRadius: 5000,
-        lastUpdate: Date.now(),
-        signalStrength: 95
-      },
-      {
-        id: 'tower_002', 
-        name: 'Emergency Beacon Tower',
-        type: 'Basecamp',
-        lat: 3.138,
-        lon: 101.686,
-        status: 'Active',
-        coverageRadius: 3000,
-        lastUpdate: Date.now(),
-        signalStrength: 87
-      },
-      {
-        id: 'tower_003',
-        name: 'Weather Monitoring Tower',
-        type: 'Relay',
-        lat: 3.142,
-        lon: 101.688,
-        status: 'Maintenance',
-        coverageRadius: 2000,
-        lastUpdate: Date.now(),
-        signalStrength: 65
+    if (!appSettings.simulation.enabled) {
+      initializeTowersData();
+    }
+  }, [appSettings.simulation.enabled]);
+
+  // Initialize towers data from Firebase
+  const initializeTowersData = async () => {
+    try {
+      console.log('Loading towers from Firebase...');
+      
+      // Set up Firebase real-time listener for towers
+      const unsubscribeTowers = firebaseService.listenForTowerUpdates((updatedTowers) => {
+        console.log('Received tower updates:', updatedTowers);
+        setTowers(updatedTowers);
+      });
+      
+      // Initial fetch as fallback
+      const initialTowers = await firebaseService.fetchTowers();
+      if (initialTowers.length > 0) {
+        setTowers(initialTowers);
       }
-    ];
-    setTowers(sampleTowers);
-  }, []);
+      
+      console.log('Towers loaded from Firebase:', initialTowers.length);
+      
+      // Cleanup function would be returned if needed
+      return () => {
+        unsubscribeTowers();
+      };
+    } catch (error) {
+      console.error('Error initializing towers data:', error);
+    }
+  };
 
   // Initialize simulation service callbacks
   useEffect(() => {
@@ -152,9 +149,49 @@ function App() {
       simulationService.start(appSettings.simulation);
       // Stop Firebase/Socket connections when using simulation
       socketService.disconnect();
+      
+      // Add sample towers for simulation mode
+      const simulationTowers: Tower[] = [
+        {
+          id: 'sim_tower_001',
+          name: 'Main Communication Tower',
+          type: 'Tower',
+          lat: 3.140,
+          lon: 101.687,
+          status: 'Active',
+          coverageRadius: 5000,
+          lastUpdate: Date.now(),
+          signalStrength: 95
+        },
+        {
+          id: 'sim_tower_002', 
+          name: 'Emergency Beacon Tower',
+          type: 'Basecamp',
+          lat: 3.138,
+          lon: 101.686,
+          status: 'Active',
+          coverageRadius: 3000,
+          lastUpdate: Date.now(),
+          signalStrength: 87
+        },
+        {
+          id: 'sim_tower_003',
+          name: 'Weather Monitoring Tower',
+          type: 'Relay',
+          lat: 3.142,
+          lon: 101.688,
+          status: 'Maintenance',
+          coverageRadius: 2000,
+          lastUpdate: Date.now(),
+          signalStrength: 65
+        }
+      ];
+      setTowers(simulationTowers);
     } else {
       console.log('Stopping simulation mode, starting live data');
       simulationService.stop();
+      // Clear simulation towers and load from Firebase
+      setTowers([]);
       // Restart live data connections
       initializeLiveData();
     }
@@ -334,21 +371,24 @@ function App() {
       // Update in simulation or live data
       if (appSettings.simulation.enabled) {
         // Update simulation hiker name
-        const updatedHikers = hikers.map(h => 
-          h.id === hikerId ? { ...h, name: newName } : h
-        );
-        setHikers(updatedHikers);
-        
-        // Update selected hiker if it's the one being edited
-        if (selectedHiker && selectedHiker.id === hikerId) {
-          setSelectedHiker({ ...selectedHiker, name: newName });
+        const success = simulationService.updateHikerName(hikerId, newName);
+        if (success) {
+          const updatedHikers = hikers.map(h => 
+            h.id === hikerId ? { ...h, name: newName } : h
+          );
+          setHikers(updatedHikers);
+          
+          // Update selected hiker if it's the one being edited
+          if (selectedHiker && selectedHiker.id === hikerId) {
+            setSelectedHiker({ ...selectedHiker, name: newName });
+          }
+          
+          console.log(`Updated simulation hiker ${hikerId} name to: ${newName}`);
         }
-        
-        console.log(`Updated hiker ${hikerId} name to: ${newName}`);
       } else {
-        // For live data, you would update via Firebase/API
-        // await firebaseService.updateHikerName(hikerId, newName);
-        console.log(`Would update hiker ${hikerId} name to: ${newName} (live mode)`);
+        // For live data, update via Firebase
+        await firebaseService.updateHikerName(hikerId, newName);
+        console.log(`Updated hiker ${hikerId} name to: ${newName} in Firebase`);
         
         // Update local state immediately for better UX
         const updatedHikers = hikers.map(h => 
@@ -362,6 +402,67 @@ function App() {
       }
     } catch (error) {
       console.error('Error updating hiker name:', error);
+    }
+  };
+
+  // Handle tower management
+  const handleAddTower = async (towerData: Omit<Tower, 'id'>) => {
+    try {
+      if (appSettings.simulation.enabled) {
+        // In simulation mode, just update local state
+        const newTower: Tower = {
+          ...towerData,
+          id: `tower_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        };
+        
+        setTowers(prev => [...prev, newTower]);
+        console.log('Added new tower (simulation):', newTower);
+      } else {
+        // In live mode, save to Firebase
+        const towerId = await firebaseService.addTower(towerData);
+        console.log('Added new tower to Firebase:', towerId);
+        // Real-time listener will update the state automatically
+      }
+    } catch (error) {
+      console.error('Error adding tower:', error);
+    }
+  };
+
+  const handleEditTower = async (towerId: string, updates: Partial<Tower>) => {
+    try {
+      if (appSettings.simulation.enabled) {
+        // In simulation mode, just update local state
+        setTowers(prev => prev.map(tower => 
+          tower.id === towerId 
+            ? { ...tower, ...updates, lastUpdate: Date.now() }
+            : tower
+        ));
+        console.log(`Updated tower (simulation) ${towerId}:`, updates);
+      } else {
+        // In live mode, save to Firebase
+        await firebaseService.updateTower(towerId, updates);
+        console.log(`Updated tower in Firebase ${towerId}:`, updates);
+        // Real-time listener will update the state automatically
+      }
+    } catch (error) {
+      console.error('Error updating tower:', error);
+    }
+  };
+
+  const handleDeleteTower = async (towerId: string) => {
+    try {
+      if (appSettings.simulation.enabled) {
+        // In simulation mode, just update local state
+        setTowers(prev => prev.filter(tower => tower.id !== towerId));
+        console.log(`Deleted tower (simulation) ${towerId}`);
+      } else {
+        // In live mode, delete from Firebase
+        await firebaseService.deleteTower(towerId);
+        console.log(`Deleted tower from Firebase ${towerId}`);
+        // Real-time listener will update the state automatically
+      }
+    } catch (error) {
+      console.error('Error deleting tower:', error);
     }
   };
 
@@ -397,14 +498,25 @@ function App() {
           <Mountain size={24} />
           <h1>TrailBeacon Dashboard</h1>
         </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => setSettingsOpen(true)}
-        >
-          <Settings size={16} />
-          Settings
-        </Button>
+        <div className="app-header__actions">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setTowerManagerOpen(true)}
+            title="Manage towers"
+          >
+            <Radio size={16} />
+            Towers
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setSettingsOpen(true)}
+          >
+            <Settings size={16} />
+            Settings
+          </Button>
+        </div>
       </header>
 
       {/* Main Layout */}
@@ -484,6 +596,16 @@ function App() {
         onClose={() => setSettingsOpen(false)}
         settings={appSettings}
         onSettingsChange={handleSettingsChange}
+      />
+
+      {/* Tower Manager Modal */}
+      <TowerManager
+        isOpen={towerManagerOpen}
+        onClose={() => setTowerManagerOpen(false)}
+        towers={towers}
+        onAddTower={handleAddTower}
+        onEditTower={handleEditTower}
+        onDeleteTower={handleDeleteTower}
       />
     </div>
   );

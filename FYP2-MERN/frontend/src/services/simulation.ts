@@ -280,6 +280,17 @@ export class SimulationService {
       this.start(settings);
     }
   }
+
+  // Method to update hiker name in simulation
+  updateHikerName(hikerId: string, newName: string): boolean {
+    const hiker = this.hikers.find(h => h.id === hikerId);
+    if (hiker) {
+      hiker.name = newName.trim();
+      hiker.lastUpdate = Date.now();
+      return true;
+    }
+    return false;
+  }
 }
 
 // Export singleton instance

@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline } from 'react-leaflet';
 import L from 'leaflet';
-import { Crosshair, Users } from 'lucide-react';
+import { Crosshair, Users, Radio } from 'lucide-react';
 import { Hiker, Tower, SafetyTrack, TrackPoint } from '../../../types';
 import { Button } from '../../common/Button';
 import { getSosStatusText } from '../../../utils/hikerUtils';
@@ -30,6 +30,7 @@ interface MapViewProps {
   unsafeHikerIds?: string[];
   hikerTrackHistory?: { hikerId: string; trackPoints: TrackPoint[] } | null;
   showTrackHistory?: boolean;
+  showTowerRanges?: boolean;
   className?: string;
 }
 
@@ -56,10 +57,12 @@ export const MapView: React.FC<MapViewProps> = ({
   unsafeHikerIds = [],
   hikerTrackHistory = null,
   showTrackHistory = false,
+  showTowerRanges = true,
   className = ''
 }) => {
   const mapRef = useRef<any>(null);
   const [showAllHikers, setShowAllHikers] = useState(true);
+  const [showTowerCoverage, setShowTowerCoverage] = useState(showTowerRanges);
 
   // Create custom marker icons
   const createHikerIcon = (hiker: Hiker, isUnsafe: boolean = false): L.DivIcon => {
@@ -68,29 +71,21 @@ export const MapView: React.FC<MapViewProps> = ({
     
     // Priority-based color assignment (highest priority first)
     let iconColor = 'rgb(56, 161, 105)'; // Default green for healthy/active hikers
-    let colorReason = 'healthy/active (default)';
     
     if (issos && !hiker.sosHandled) {
       iconColor = 'rgb(229, 62, 62)'; // Red for active SOS (highest priority)
-      colorReason = 'active SOS';
     } else if (issos && hiker.sosHandled) {
       iconColor = 'rgb(214, 158, 46)'; // Orange for handled SOS
-      colorReason = 'handled SOS';
     } else if (isUnsafe) {
       iconColor = 'rgb(245, 101, 101)'; // Light red for unsafe hikers
-      colorReason = 'unsafe location';
     } else if (hiker.battery <= 10) {
       iconColor = 'rgb(229, 62, 62)'; // Red for critical battery
-      colorReason = 'critical battery';
     } else if (hiker.battery <= 25) {
       iconColor = 'rgb(221, 107, 32)'; // Orange for low battery
-      colorReason = 'low battery';
     } else if (hiker.status === 'Inactive') {
       iconColor = 'rgb(160, 174, 192)'; // Gray for inactive
-      colorReason = 'inactive status';
     } else if (hiker.status === 'Resting') {
       iconColor = 'rgb(66, 153, 225)'; // Blue for resting
-      colorReason = 'resting status';
     }
     // Active/Moving hikers with good battery stay green
 
@@ -234,17 +229,19 @@ export const MapView: React.FC<MapViewProps> = ({
             </Marker>
             
             {/* Tower coverage circle */}
-            <Circle
-              center={[tower.lat, tower.lon]}
-              radius={tower.coverageRadius}
-              pathOptions={{
-                color: tower.status === 'Active' ? '#38A169' : '#E53E3E',
-                fillColor: tower.status === 'Active' ? '#38A169' : '#E53E3E',
-                fillOpacity: 0.1,
-                weight: 2,
-                opacity: 0.6
-              }}
-            />
+            {showTowerCoverage && (
+              <Circle
+                center={[tower.lat, tower.lon]}
+                radius={tower.coverageRadius}
+                pathOptions={{
+                  color: tower.status === 'Active' ? '#38A169' : '#E53E3E',
+                  fillColor: tower.status === 'Active' ? '#38A169' : '#E53E3E',
+                  fillOpacity: 0.1,
+                  weight: 2,
+                  opacity: 0.6
+                }}
+              />
+            )}
           </React.Fragment>
         ))}
 
@@ -323,6 +320,15 @@ export const MapView: React.FC<MapViewProps> = ({
           title="Toggle all hikers"
         >
           <Users size={18} />
+        </Button>
+        
+        <Button
+          variant={showTowerCoverage ? "primary" : "secondary"}
+          size="sm"
+          onClick={() => setShowTowerCoverage(!showTowerCoverage)}
+          title="Toggle tower coverage"
+        >
+          <Radio size={18} />
         </Button>
       </div>
     </div>
