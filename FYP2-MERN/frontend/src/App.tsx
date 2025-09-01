@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Mountain, Settings, Radio } from 'lucide-react';
+import { Mountain, Settings, Radio, Route } from 'lucide-react';
 import { MapView } from './components/dashboard/MapView';
 import { HikerTracker } from './components/widgets/HikerTracker';
 import { SOSAlert } from './components/widgets/SOSAlert';
@@ -8,13 +8,14 @@ import { Modal } from './components/common/Modal';
 import { Sidebar } from './components/common/Sidebar';
 import { Settings as SettingsModal } from './components/dashboard/Settings';
 import { TowerManager } from './components/dashboard/TowerManager/TowerManager';
+import { TrackManager } from './components/dashboard/TrackManager/TrackManager';
 import { firebaseService } from './services/firebase';
 import { socketService } from './services/socket';
 import { authService } from './services/auth';
 import { simulationService } from './services/simulation';
 import { safetyTrackService } from './services/safetyTracks';
 import { hikerHistoryService } from './services/hikerHistory';
-import { Hiker, Tower, AppSettings } from './types';
+import { Hiker, Tower, AppSettings, SafetyTrack } from './types';
 import { Hiker as HikerModel } from './models/Hiker';
 import './styles/globals.css';
 import './App.css';
@@ -36,6 +37,7 @@ function App() {
   const [showTrackHistory, setShowTrackHistory] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [towerManagerOpen, setTowerManagerOpen] = useState(false);
+  const [trackManagerOpen, setTrackManagerOpen] = useState(false);
   
   // App Settings
   const [appSettings, setAppSettings] = useState<AppSettings>({
@@ -72,22 +74,22 @@ function App() {
         const parsed = JSON.parse(savedSettings);
         setAppSettings(parsed);
         
-        // Load safety tracks into the service
-        if (parsed.safety?.tracks) {
+        // Load safety tracks from Firebase if not in simulation mode
+        if (!parsed.simulation?.enabled) {
+          initializeTracksData();
+        } else if (parsed.safety?.tracks) {
           safetyTrackService.setTracks(parsed.safety.tracks);
         }
       } catch (error) {
         console.error('Error loading saved settings:', error);
       }
     } else {
-      // Create a sample safety track for demonstration
-      safetyTrackService.createSampleTrack();
-      const sampleTracks = safetyTrackService.getTracks();
+      // Initialize with empty tracks - users can create their own
       setAppSettings(prev => ({
         ...prev,
         safety: {
           ...prev.safety,
-          tracks: sampleTracks
+          tracks: []
         }
       }));
     }
@@ -405,6 +407,116 @@ function App() {
     }
   };
 
+  // Initialize tracks data from Firebase
+  const initializeTracksData = async () => {
+    try {
+      console.log('Loading safety tracks from Firebase...');
+      
+      // Set up Firebase real-time listener for tracks
+      const unsubscribeTracks = firebaseService.listenForSafetyTrackUpdates((updatedTracks) => {
+        console.log('Received safety track updates:', updatedTracks);
+        // Update the safety track service
+        safetyTrackService.setTracks(updatedTracks);
+        // Update app settings
+        setAppSettings(prev => ({
+          ...prev,
+          safety: {
+            ...prev.safety,
+            tracks: updatedTracks
+          }
+        }));
+      });
+      
+      // Initial fetch as fallback
+      const initialTracks = await firebaseService.fetchSafetyTracks();
+      if (initialTracks.length > 0) {
+        safetyTrackService.setTracks(initialTracks);
+        setAppSettings(prev => ({
+          ...prev,
+          safety: {
+            ...prev.safety,
+            tracks: initialTracks
+          }
+        }));
+      }
+      
+      console.log('Safety tracks loaded from Firebase:', initialTracks.length);
+      
+      // Cleanup function would be returned if needed
+      return () => {
+        unsubscribeTracks();
+      };
+    } catch (error) {
+      console.error('Error initializing tracks data:', error);
+    }
+  };
+
+  // Handle track management
+  const handleAddTrack = async (trackData: Omit<SafetyTrack, 'id'>) => {
+    try {
+      if (appSettings.simulation.enabled) {
+        // In simulation mode, just update local state
+        const newTrack = safetyTrackService.addTrack(trackData);
+        updateAppSettingsWithTracks();
+        console.log('Added new track (simulation):', newTrack);
+      } else {
+        // In live mode, save to Firebase
+        const trackId = await firebaseService.addSafetyTrack(trackData);
+        console.log('Added new track to Firebase:', trackId);
+        // Real-time listener will update the state automatically
+      }
+    } catch (error) {
+      console.error('Error adding track:', error);
+    }
+  };
+
+  const handleEditTrack = async (trackId: string, updates: Partial<SafetyTrack>) => {
+    try {
+      if (appSettings.simulation.enabled) {
+        // In simulation mode, just update local state
+        safetyTrackService.updateTrack(trackId, updates);
+        updateAppSettingsWithTracks();
+        console.log(`Updated track (simulation) ${trackId}:`, updates);
+      } else {
+        // In live mode, save to Firebase
+        await firebaseService.updateSafetyTrack(trackId, updates);
+        console.log(`Updated track in Firebase ${trackId}:`, updates);
+        // Real-time listener will update the state automatically
+      }
+    } catch (error) {
+      console.error('Error updating track:', error);
+    }
+  };
+
+  const handleDeleteTrack = async (trackId: string) => {
+    try {
+      if (appSettings.simulation.enabled) {
+        // In simulation mode, just update local state
+        safetyTrackService.removeTrack(trackId);
+        updateAppSettingsWithTracks();
+        console.log(`Deleted track (simulation) ${trackId}`);
+      } else {
+        // In live mode, delete from Firebase
+        await firebaseService.deleteSafetyTrack(trackId);
+        console.log(`Deleted track from Firebase ${trackId}`);
+        // Real-time listener will update the state automatically
+      }
+    } catch (error) {
+      console.error('Error deleting track:', error);
+    }
+  };
+
+  const updateAppSettingsWithTracks = () => {
+    const currentTracks = safetyTrackService.getTracks();
+    setAppSettings(prev => ({
+      ...prev,
+      safety: {
+        ...prev.safety,
+        tracks: currentTracks
+      }
+    }));
+  };
+
   // Handle tower management
   const handleAddTower = async (towerData: Omit<Tower, 'id'>) => {
     try {
@@ -502,6 +614,15 @@ function App() {
           <Button
             variant="secondary"
             size="sm"
+            onClick={() => setTrackManagerOpen(true)}
+            title="Manage hiking tracks"
+          >
+            <Route size={16} />
+            Tracks
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => setTowerManagerOpen(true)}
             title="Manage towers"
           >
@@ -596,6 +717,18 @@ function App() {
         onClose={() => setSettingsOpen(false)}
         settings={appSettings}
         onSettingsChange={handleSettingsChange}
+      />
+
+      {/* Track Manager Modal */}
+      <TrackManager
+        isOpen={trackManagerOpen}
+        onClose={() => setTrackManagerOpen(false)}
+        tracks={appSettings.safety.tracks}
+        onAddTrack={handleAddTrack}
+        onEditTrack={handleEditTrack}
+        onDeleteTrack={handleDeleteTrack}
+        mapCenter={appSettings.map.center}
+        mapZoom={appSettings.map.defaultZoom}
       />
 
       {/* Tower Manager Modal */}
