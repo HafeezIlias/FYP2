@@ -37,17 +37,18 @@
 
 .hiker-marker {
   position: relative;
-  width: 30px;
-  height: 30px;
+  width: 120px;
+  height: 55px;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-direction: column;
 }
 
 .hiker-marker__icon {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  border-radius: 50% !important;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -57,16 +58,32 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   position: relative;
   z-index: 2;
+  overflow: hidden;
+}
+
+.hiker-marker__name {
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  min-width: 60px;
+  backdrop-filter: blur(4px);
+  order: -1; /* Ensures name appears at the top */
+  opacity: 0.9;
 }
 
 .hiker-marker__pulse {
   position: absolute;
-  top: 50%;
+  top: 60%;
   left: 50%;
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: currentColor;
   opacity: 0.3;
   transform: translate(-50%, -50%);
   animation: pulse 2s infinite;
@@ -92,6 +109,10 @@
 .hiker-marker--sos .hiker-marker__pulse {
   animation: sosPulse 1s infinite;
   opacity: 0.6;
+}
+
+.hiker-marker--sos .hiker-marker__name {
+  animation: sosNameFlash 1s infinite alternate;
 }
 
 /* Custom Tower Markers */
@@ -197,6 +218,17 @@
   }
 }
 
+@keyframes sosNameFlash {
+  0% {
+    opacity: 0.9;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  100% {
+    opacity: 0.7;
+    box-shadow: 0 0 8px rgba(229, 62, 62, 0.6);
+  }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .map-controls {
@@ -205,14 +237,20 @@
   }
   
   .hiker-marker {
-    width: 28px;
-    height: 28px;
+    width: 100px;
+    height: 50px;
   }
   
   .hiker-marker__icon {
     width: 22px;
     height: 22px;
     font-size: 11px;
+  }
+  
+  .hiker-marker__name {
+    font-size: 10px;
+    padding: 1px 6px;
+    min-width: 50px;
   }
   
   .tower-marker {

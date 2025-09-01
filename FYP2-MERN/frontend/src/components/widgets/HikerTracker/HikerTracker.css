@@ -50,6 +50,17 @@
   min-width: 0;
 }
 
+.hiker-tracker__name-container {
+  min-width: 0;
+  flex: 1;
+}
+
+.hiker-tracker__name-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .hiker-tracker__name {
   margin: 0 0 4px 0;
   font-size: 16px;
@@ -58,6 +69,84 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.hiker-tracker__name-edit-btn {
+  background: none;
+  border: none;
+  color: #718096;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.hiker-tracker__name-edit-btn:hover {
+  background: #EDF2F7;
+  color: #4299E1;
+}
+
+.hiker-tracker__name-edit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.hiker-tracker__name-input {
+  background: white;
+  border: 2px solid #4299E1;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #2D3748;
+  outline: none;
+  flex: 1;
+  min-width: 0;
+}
+
+.hiker-tracker__name-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.hiker-tracker__name-save,
+.hiker-tracker__name-cancel {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.hiker-tracker__name-save {
+  color: #38A169;
+}
+
+.hiker-tracker__name-save:hover {
+  background: #F0FFF4;
+  color: #22543D;
+}
+
+.hiker-tracker__name-cancel {
+  color: #E53E3E;
+}
+
+.hiker-tracker__name-cancel:hover {
+  background: #FED7D7;
+  color: #742A2A;
 }
 
 .hiker-tracker__status {
@@ -308,6 +397,29 @@
   
   .hiker-tracker__name {
     color: #F7FAFC;
+  }
+  
+  .hiker-tracker__name-edit-btn {
+    color: #A0AEC0;
+  }
+  
+  .hiker-tracker__name-edit-btn:hover {
+    background: #4A5568;
+    color: #63B3ED;
+  }
+  
+  .hiker-tracker__name-input {
+    background: #4A5568;
+    border-color: #63B3ED;
+    color: #F7FAFC;
+  }
+  
+  .hiker-tracker__name-save:hover {
+    background: #1A2F23;
+  }
+  
+  .hiker-tracker__name-cancel:hover {
+    background: #3C2626;
   }
   
   .hiker-tracker__status-text {

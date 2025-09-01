@@ -47,22 +47,148 @@ export class SimulationService {
       'Quinn Jackson', 'Rachel Green', 'Samuel King', 'Tina Lewis'
     ];
 
-    const statuses: Hiker['status'][] = ['Active', 'Moving', 'Resting'];
+    const statuses: Hiker['status'][] = ['Active', 'Moving', 'Resting', 'Inactive'];
+    const hikers: Hiker[] = [];
 
-    return Array.from({ length: count }, (_, index) => ({
-      id: `sim_hiker_${index + 1}`,
-      name: names[index % names.length],
-      lat: this.baseLocation.lat + (Math.random() - 0.5) * this.maxDistance,
-      lon: this.baseLocation.lng + (Math.random() - 0.5) * this.maxDistance,
-      status: statuses[Math.floor(Math.random() * statuses.length)],
-      battery: Math.floor(Math.random() * 100) + 1,
-      lastUpdate: Date.now(),
-      sos: false,
-      sosHandled: false,
-      sosEmergencyDispatched: false,
-      sosNotified: false,
-      batteryNotified: false
-    }));
+    // Create diverse test hikers for first few
+    for (let index = 0; index < Math.min(count, 6); index++) {
+      let hiker: Hiker;
+      
+      switch (index) {
+        case 0: // Green - Healthy hiker
+          hiker = {
+            id: `sim_hiker_${index + 1}`,
+            name: names[index % names.length],
+            lat: this.baseLocation.lat + (Math.random() - 0.5) * this.maxDistance,
+            lon: this.baseLocation.lng + (Math.random() - 0.5) * this.maxDistance,
+            status: 'Active',
+            battery: 85,
+            lastUpdate: Date.now(),
+            sos: false,
+            sosHandled: false,
+            sosEmergencyDispatched: false,
+            sosNotified: false,
+            batteryNotified: false
+          };
+          break;
+        case 1: // Red - SOS hiker
+          hiker = {
+            id: `sim_hiker_${index + 1}`,
+            name: names[index % names.length],
+            lat: this.baseLocation.lat + (Math.random() - 0.5) * this.maxDistance,
+            lon: this.baseLocation.lng + (Math.random() - 0.5) * this.maxDistance,
+            status: 'SOS',
+            battery: 45,
+            lastUpdate: Date.now(),
+            sos: true,
+            sosHandled: false,
+            sosEmergencyDispatched: false,
+            sosNotified: false,
+            batteryNotified: false
+          };
+          break;
+        case 2: // Orange - Low battery
+          hiker = {
+            id: `sim_hiker_${index + 1}`,
+            name: names[index % names.length],
+            lat: this.baseLocation.lat + (Math.random() - 0.5) * this.maxDistance,
+            lon: this.baseLocation.lng + (Math.random() - 0.5) * this.maxDistance,
+            status: 'Moving',
+            battery: 20,
+            lastUpdate: Date.now(),
+            sos: false,
+            sosHandled: false,
+            sosEmergencyDispatched: false,
+            sosNotified: false,
+            batteryNotified: false
+          };
+          break;
+        case 3: // Blue - Resting
+          hiker = {
+            id: `sim_hiker_${index + 1}`,
+            name: names[index % names.length],
+            lat: this.baseLocation.lat + (Math.random() - 0.5) * this.maxDistance,
+            lon: this.baseLocation.lng + (Math.random() - 0.5) * this.maxDistance,
+            status: 'Resting',
+            battery: 60,
+            lastUpdate: Date.now(),
+            sos: false,
+            sosHandled: false,
+            sosEmergencyDispatched: false,
+            sosNotified: false,
+            batteryNotified: false
+          };
+          break;
+        case 4: // Gray - Inactive
+          hiker = {
+            id: `sim_hiker_${index + 1}`,
+            name: names[index % names.length],
+            lat: this.baseLocation.lat + (Math.random() - 0.5) * this.maxDistance,
+            lon: this.baseLocation.lng + (Math.random() - 0.5) * this.maxDistance,
+            status: 'Inactive',
+            battery: 30,
+            lastUpdate: Date.now(),
+            sos: false,
+            sosHandled: false,
+            sosEmergencyDispatched: false,
+            sosNotified: false,
+            batteryNotified: false
+          };
+          break;
+        case 5: // Red - Critical battery
+          hiker = {
+            id: `sim_hiker_${index + 1}`,
+            name: names[index % names.length],
+            lat: this.baseLocation.lat + (Math.random() - 0.5) * this.maxDistance,
+            lon: this.baseLocation.lng + (Math.random() - 0.5) * this.maxDistance,
+            status: 'Active',
+            battery: 8,
+            lastUpdate: Date.now(),
+            sos: false,
+            sosHandled: false,
+            sosEmergencyDispatched: false,
+            sosNotified: false,
+            batteryNotified: false
+          };
+          break;
+        default:
+          hiker = {
+            id: `sim_hiker_${index + 1}`,
+            name: names[index % names.length],
+            lat: this.baseLocation.lat + (Math.random() - 0.5) * this.maxDistance,
+            lon: this.baseLocation.lng + (Math.random() - 0.5) * this.maxDistance,
+            status: statuses[Math.floor(Math.random() * statuses.length)],
+            battery: Math.floor(Math.random() * 50) + 50,
+            lastUpdate: Date.now(),
+            sos: false,
+            sosHandled: false,
+            sosEmergencyDispatched: false,
+            sosNotified: false,
+            batteryNotified: false
+          };
+      }
+      hikers.push(hiker);
+    }
+
+    // Generate remaining hikers randomly
+    for (let index = hikers.length; index < count; index++) {
+      hikers.push({
+        id: `sim_hiker_${index + 1}`,
+        name: names[index % names.length],
+        lat: this.baseLocation.lat + (Math.random() - 0.5) * this.maxDistance,
+        lon: this.baseLocation.lng + (Math.random() - 0.5) * this.maxDistance,
+        status: statuses[Math.floor(Math.random() * statuses.length)],
+        battery: Math.floor(Math.random() * 50) + 50, // Start with 50-100% battery
+        lastUpdate: Date.now(),
+        sos: false,
+        sosHandled: false,
+        sosEmergencyDispatched: false,
+        sosNotified: false,
+        batteryNotified: false
+      });
+    }
+
+    return hikers;
   }
 
   private updateHikers(autoSos: boolean) {
@@ -93,8 +219,8 @@ export class SimulationService {
       }
 
       // Update battery (slowly drain)
-      if (Math.random() < 0.2) {
-        hiker.battery = Math.max(0, hiker.battery - Math.floor(Math.random() * 3));
+      if (Math.random() < 0.05) { // Reduced from 20% to 5% chance
+        hiker.battery = Math.max(0, hiker.battery - Math.floor(Math.random() * 2) + 1); // Drain 1-2 points
       }
 
       // Generate random SOS events

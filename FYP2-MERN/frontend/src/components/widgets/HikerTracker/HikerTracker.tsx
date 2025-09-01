@@ -1,5 +1,5 @@
-import React from 'react';
-import { User, MapPin, Battery, Clock, AlertTriangle, Route } from 'lucide-react';
+import React, { useState } from 'react';
+import { User, MapPin, Battery, Clock, AlertTriangle, Route, Edit2, Check, X } from 'lucide-react';
 import { Hiker } from '../../../types';
 import { Button } from '../../common/Button';
 import { getSosStatusText } from '../../../utils/hikerUtils';
@@ -12,6 +12,7 @@ interface HikerTrackerProps {
   onSosHandle?: () => void;
   onSosReset?: () => void;
   onShowTrackHistory?: () => void;
+  onNameChange?: (newName: string) => void;
   showActions?: boolean;
   compact?: boolean;
   className?: string;
@@ -24,10 +25,31 @@ export const HikerTracker: React.FC<HikerTrackerProps> = ({
   onSosHandle,
   onSosReset,
   onShowTrackHistory,
+  onNameChange,
   showActions = true,
   compact = false,
   className = ''
 }) => {
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState(hiker.name);
+
+  const handleNameEdit = () => {
+    setIsEditingName(true);
+    setEditedName(hiker.name);
+  };
+
+  const handleNameSave = () => {
+    if (editedName.trim() && editedName.trim() !== hiker.name && onNameChange) {
+      onNameChange(editedName.trim());
+    }
+    setIsEditingName(false);
+  };
+
+  const handleNameCancel = () => {
+    setEditedName(hiker.name);
+    setIsEditingName(false);
+  };
+
   const getBatteryColor = (battery: number): string => {
     if (battery > 50) return '#38A169';
     if (battery > 20) return '#D69E2E';
@@ -75,7 +97,38 @@ export const HikerTracker: React.FC<HikerTrackerProps> = ({
           <User size={compact ? 16 : 20} />
         </div>
         <div className="hiker-tracker__info">
-          <h4 className="hiker-tracker__name">{hiker.name}</h4>
+          <div className="hiker-tracker__name-container">
+            {isEditingName ? (
+              <div className="hiker-tracker__name-edit">
+                <input
+                  type="text"
+                  value={editedName}
+                  onChange={(e) => setEditedName(e.target.value)}
+                  className="hiker-tracker__name-input"
+                  onKeyPress={(e) => e.key === 'Enter' && handleNameSave()}
+                  onBlur={handleNameSave}
+                  autoFocus
+                />
+                <div className="hiker-tracker__name-actions">
+                  <button onClick={handleNameSave} className="hiker-tracker__name-save">
+                    <Check size={12} />
+                  </button>
+                  <button onClick={handleNameCancel} className="hiker-tracker__name-cancel">
+                    <X size={12} />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="hiker-tracker__name-display">
+                <h4 className="hiker-tracker__name">{hiker.name}</h4>
+                {onNameChange && !compact && (
+                  <button onClick={handleNameEdit} className="hiker-tracker__name-edit-btn">
+                    <Edit2 size={12} />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
           <div className="hiker-tracker__status">
             <span 
               className="hiker-tracker__status-dot"

@@ -328,6 +328,43 @@ function App() {
     setShowTrackHistory(showTrackHistory === hikerId ? null : hikerId);
   };
 
+  // Handle hiker name change
+  const handleHikerNameChange = async (hikerId: string, newName: string) => {
+    try {
+      // Update in simulation or live data
+      if (appSettings.simulation.enabled) {
+        // Update simulation hiker name
+        const updatedHikers = hikers.map(h => 
+          h.id === hikerId ? { ...h, name: newName } : h
+        );
+        setHikers(updatedHikers);
+        
+        // Update selected hiker if it's the one being edited
+        if (selectedHiker && selectedHiker.id === hikerId) {
+          setSelectedHiker({ ...selectedHiker, name: newName });
+        }
+        
+        console.log(`Updated hiker ${hikerId} name to: ${newName}`);
+      } else {
+        // For live data, you would update via Firebase/API
+        // await firebaseService.updateHikerName(hikerId, newName);
+        console.log(`Would update hiker ${hikerId} name to: ${newName} (live mode)`);
+        
+        // Update local state immediately for better UX
+        const updatedHikers = hikers.map(h => 
+          h.id === hikerId ? { ...h, name: newName } : h
+        );
+        setHikers(updatedHikers);
+        
+        if (selectedHiker && selectedHiker.id === hikerId) {
+          setSelectedHiker({ ...selectedHiker, name: newName });
+        }
+      }
+    } catch (error) {
+      console.error('Error updating hiker name:', error);
+    }
+  };
+
   // Get SOS hikers
   const sosHikers = hikers.filter(hiker => hiker.sos && !hiker.sosHandled);
 
@@ -436,6 +473,7 @@ function App() {
             onSosHandle={() => handleSosAction(selectedHiker.id, 'handle')}
             onSosReset={() => handleSosAction(selectedHiker.id, 'reset')}
             onShowTrackHistory={() => handleToggleTrackHistory(selectedHiker.id)}
+            onNameChange={(newName) => handleHikerNameChange(selectedHiker.id, newName)}
           />
         )}
       </Modal>

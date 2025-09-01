@@ -66,32 +66,48 @@ export const MapView: React.FC<MapViewProps> = ({
     const isTracking = trackingHikerId === hiker.id;
     const issos = hiker.sos;
     
-    let iconColor = '#4299E1'; // Default blue
-    if (issos && hiker.sosHandled) {
-      iconColor = '#D69E2E'; // Orange for handled SOS
-    } else if (issos) {
-      iconColor = '#E53E3E'; // Red for active SOS
+    // Priority-based color assignment (highest priority first)
+    let iconColor = 'rgb(56, 161, 105)'; // Default green for healthy/active hikers
+    let colorReason = 'healthy/active (default)';
+    
+    if (issos && !hiker.sosHandled) {
+      iconColor = 'rgb(229, 62, 62)'; // Red for active SOS (highest priority)
+      colorReason = 'active SOS';
+    } else if (issos && hiker.sosHandled) {
+      iconColor = 'rgb(214, 158, 46)'; // Orange for handled SOS
+      colorReason = 'handled SOS';
     } else if (isUnsafe) {
-      iconColor = '#F56565'; // Light red for unsafe hikers
-    } else if (hiker.battery < 20) {
-      iconColor = '#DD6B20'; // Orange for low battery
+      iconColor = 'rgb(245, 101, 101)'; // Light red for unsafe hikers
+      colorReason = 'unsafe location';
+    } else if (hiker.battery <= 10) {
+      iconColor = 'rgb(229, 62, 62)'; // Red for critical battery
+      colorReason = 'critical battery';
+    } else if (hiker.battery <= 25) {
+      iconColor = 'rgb(221, 107, 32)'; // Orange for low battery
+      colorReason = 'low battery';
+    } else if (hiker.status === 'Inactive') {
+      iconColor = 'rgb(160, 174, 192)'; // Gray for inactive
+      colorReason = 'inactive status';
     } else if (hiker.status === 'Resting') {
-      iconColor = '#718096'; // Gray for resting
+      iconColor = 'rgb(66, 153, 225)'; // Blue for resting
+      colorReason = 'resting status';
     }
+    // Active/Moving hikers with good battery stay green
 
     return L.divIcon({
       className: 'custom-hiker-marker',
       html: `
         <div class="hiker-marker ${isTracking ? 'hiker-marker--tracking' : ''} ${issos ? 'hiker-marker--sos' : ''} ${isUnsafe ? 'hiker-marker--unsafe' : ''}">
-          <div class="hiker-marker__icon" style="background-color: ${iconColor}">
+          <div class="hiker-marker__name" style="background: ${iconColor} !important;">${hiker.name}</div>
+          <div class="hiker-marker__icon" style="background: ${iconColor} !important;">
             <i class="fas fa-user"></i>
           </div>
-          <div class="hiker-marker__pulse"></div>
+          <div class="hiker-marker__pulse" style="background: ${iconColor} !important;"></div>
           ${isUnsafe ? '<div class="hiker-marker__warning">⚠</div>' : ''}
         </div>
       `,
-      iconSize: [30, 30],
-      iconAnchor: [15, 15],
+      iconSize: [120, 55],
+      iconAnchor: [60, 45],
       popupAnchor: [0, -15]
     });
   };
