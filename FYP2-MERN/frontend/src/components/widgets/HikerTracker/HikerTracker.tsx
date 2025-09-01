@@ -80,6 +80,27 @@ export const HikerTracker: React.FC<HikerTrackerProps> = ({
               style={{ backgroundColor: getStatusColor(hiker.status) }}
             />
             <span className="hiker-tracker__status-text">{hiker.status}</span>
+            {compact && (
+              <div className="hiker-tracker__compact-battery">
+                <Battery 
+                  size={12} 
+                  className="hiker-tracker__compact-battery-icon" 
+                  style={{ color: getBatteryColor(hiker.battery) }}
+                />
+                <span 
+                  className="hiker-tracker__compact-battery-text"
+                  style={{ color: getBatteryColor(hiker.battery) }}
+                >
+                  {Math.round(hiker.battery)}%
+                </span>
+                {hiker.battery <= 5 && (
+                  <span className="hiker-tracker__compact-critical">🔋</span>
+                )}
+                {hiker.battery <= 20 && hiker.battery > 5 && (
+                  <span className="hiker-tracker__compact-warning">⚠</span>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -95,17 +116,32 @@ export const HikerTracker: React.FC<HikerTrackerProps> = ({
           </div>
           
           <div className="hiker-tracker__detail">
-            <Battery size={16} className="hiker-tracker__icon" />
-            <span className="hiker-tracker__value">{Math.round(hiker.battery)}%</span>
+            <Battery 
+              size={16} 
+              className="hiker-tracker__icon" 
+              style={{ color: getBatteryColor(hiker.battery) }}
+            />
+            <span 
+              className="hiker-tracker__value"
+              style={{ color: getBatteryColor(hiker.battery) }}
+            >
+              {Math.round(hiker.battery)}%
+            </span>
             <div className="hiker-tracker__battery-bar">
               <div 
                 className="hiker-tracker__battery-fill"
                 style={{ 
-                  width: `${hiker.battery}%`,
+                  width: `${Math.max(hiker.battery, 5)}%`,
                   backgroundColor: getBatteryColor(hiker.battery)
                 }}
               />
             </div>
+            {hiker.battery <= 20 && (
+              <span className="hiker-tracker__battery-warning">⚠ Low Battery</span>
+            )}
+            {hiker.battery <= 5 && (
+              <span className="hiker-tracker__battery-critical">🔋 Critical</span>
+            )}
           </div>
           
           <div className="hiker-tracker__detail">

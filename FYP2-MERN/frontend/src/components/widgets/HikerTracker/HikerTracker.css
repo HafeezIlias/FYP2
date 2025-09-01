@@ -79,6 +79,37 @@
   font-weight: 500;
 }
 
+/* Compact Battery Display */
+.hiker-tracker__compact-battery {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.hiker-tracker__compact-battery-icon {
+  flex-shrink: 0;
+}
+
+.hiker-tracker__compact-battery-text {
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 30px;
+}
+
+.hiker-tracker__compact-warning {
+  font-size: 10px;
+  color: #D69E2E;
+  margin-left: 2px;
+}
+
+.hiker-tracker__compact-critical {
+  font-size: 10px;
+  color: #E53E3E;
+  margin-left: 2px;
+  animation: batteryBlink 1s infinite alternate;
+}
+
 /* Details */
 .hiker-tracker__details {
   display: flex;
@@ -119,6 +150,29 @@
   height: 100%;
   border-radius: 3px;
   transition: all 0.3s ease;
+}
+
+/* Battery Warning Indicators */
+.hiker-tracker__battery-warning {
+  font-size: 11px;
+  color: #D69E2E;
+  font-weight: 600;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
+.hiker-tracker__battery-critical {
+  font-size: 11px;
+  color: #E53E3E;
+  font-weight: 600;
+  margin-left: 4px;
+  white-space: nowrap;
+  animation: batteryBlink 1s infinite alternate;
+}
+
+@keyframes batteryBlink {
+  0% { opacity: 1; }
+  100% { opacity: 0.5; }
 }
 
 /* SOS Alert */

@@ -6,10 +6,9 @@ export class SimulationService {
   private readonly baseLocation = { lat: 3.139, lng: 101.6869 };
   private readonly maxDistance = 0.01; // ~1km radius
   
-  constructor(
-    private onHikerUpdate: (hikers: Hiker[]) => void,
-    private onSosAlert: (hiker: Hiker) => void
-  ) {}
+  // Make these public so they can be set from outside
+  public onHikerUpdate: (hikers: Hiker[]) => void = () => {};
+  public onSosAlert: (hiker: Hiker) => void = () => {};
 
   start(settings: { speed: number; hikersCount: number; autoSos: boolean }) {
     if (this.intervalId) {
@@ -158,7 +157,4 @@ export class SimulationService {
 }
 
 // Export singleton instance
-export const simulationService = new SimulationService(
-  () => {}, // Will be set by App component
-  () => {}  // Will be set by App component
-);
+export const simulationService = new SimulationService();

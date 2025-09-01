@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mountain, Users, RadioTower, AlertTriangle } from 'lucide-react';
+import { Mountain, Users, RadioTower, AlertTriangle, Battery } from 'lucide-react';
 import { Hiker, Tower } from '../../../types';
 import { SearchBox } from '../SearchBox';
 import { StatCard } from '../StatCard';
@@ -39,7 +39,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     sosCount: hikers.filter(h => h.sos && !h.sosHandled).length,
     totalTowers: towers.length,
     activeTowers: towers.filter(t => t.status === 'Active').length,
-    lowBatteryCount: hikers.filter(h => h.battery < 20).length
+    lowBatteryCount: hikers.filter(h => h.battery < 20).length,
+    criticalBatteryCount: hikers.filter(h => h.battery <= 5).length,
+    averageBattery: hikers.length > 0 ? Math.round(hikers.reduce((sum, h) => sum + h.battery, 0) / hikers.length) : 0
   };
 
   const sidebarClasses = [
@@ -99,6 +101,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 icon={<AlertTriangle size={18} />}
                 value={stats.sosCount}
                 label="SOS"
+                variant="danger"
+              />
+            )}
+            {stats.lowBatteryCount > 0 && (
+              <StatCard
+                icon={<Battery size={18} />}
+                value={stats.lowBatteryCount}
+                label="Low Battery"
+                variant="warning"
+              />
+            )}
+            {stats.criticalBatteryCount > 0 && (
+              <StatCard
+                icon={<Battery size={18} />}
+                value={stats.criticalBatteryCount}
+                label="Critical"
                 variant="danger"
               />
             )}

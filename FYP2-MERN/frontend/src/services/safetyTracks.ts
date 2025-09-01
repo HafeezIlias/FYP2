@@ -1,4 +1,4 @@
-import { SafetyTrack, TrackPoint, Hiker } from '../types';
+import { SafetyTrack, Hiker } from '../types';
 
 export class SafetyTrackService {
   private tracks: SafetyTrack[] = [];

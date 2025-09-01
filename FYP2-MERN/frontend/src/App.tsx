@@ -132,11 +132,12 @@ function App() {
   // Initialize simulation service callbacks
   useEffect(() => {
     // Set up simulation service callbacks
-    (simulationService as any).onHikerUpdate = (updatedHikers: Hiker[]) => {
+    simulationService.onHikerUpdate = (updatedHikers: Hiker[]) => {
+      console.log('Simulation hikers updated:', updatedHikers.length);
       setHikers(updatedHikers);
     };
     
-    (simulationService as any).onSosAlert = (hiker: Hiker) => {
+    simulationService.onSosAlert = (hiker: Hiker) => {
       console.log('Simulation SOS Alert:', hiker.name);
       // The hiker update will be handled by the main callback
     };
