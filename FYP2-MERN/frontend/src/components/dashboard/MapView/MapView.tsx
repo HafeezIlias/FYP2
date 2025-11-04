@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import { Crosshair, Users, Radio } from 'lucide-react';
@@ -23,7 +23,9 @@ interface MapViewProps {
   style: 'default' | 'satellite' | 'terrain' | 'dark';
   onHikerClick: (hiker: Hiker) => void;
   onTowerClick: (tower: Tower) => void;
+  selectedHikerId?: string | null;
   trackingHikerId?: string | null;
+  onTrackingCancelled?: () => void;
   safetyTracks?: SafetyTrack[];
   showSafetyTracks?: boolean;
   highlightUnsafeHikers?: boolean;
@@ -50,7 +52,9 @@ export const MapView: React.FC<MapViewProps> = ({
   style,
   onHikerClick,
   onTowerClick,
+  selectedHikerId,
   trackingHikerId,
+  onTrackingCancelled,
   safetyTracks = [],
   showSafetyTracks = false,
   highlightUnsafeHikers = false,
@@ -98,7 +102,7 @@ export const MapView: React.FC<MapViewProps> = ({
             <i class="fas fa-user"></i>
           </div>
           <div class="hiker-marker__pulse" style="background: ${iconColor} !important;"></div>
-          ${isUnsafe ? '<div class="hiker-marker__warning">⚠</div>' : ''}
+          ${isUnsafe ? '<div class="hiker-marker__warning"><i class="fas fa-exclamation-triangle"></i></div>' : ''}
         </div>
       `,
       iconSize: [120, 55],
@@ -136,13 +140,48 @@ export const MapView: React.FC<MapViewProps> = ({
     });
   };
 
-  // Center map on specific hiker (currently unused but kept for future use)
-  // const centerOnHiker = (hikerId: string) => {
-  //   const hiker = hikers.find(h => h.id === hikerId);
-  //   if (hiker && mapRef.current) {
-  //     mapRef.current.setView([hiker.lat, hiker.lon], 16);
-  //   }
-  // };
+  // Center map on specific hiker
+  const centerOnHiker = (hikerId: string) => {
+    const hiker = hikers.find(h => h.id === hikerId);
+    if (hiker && mapRef.current) {
+      mapRef.current.flyTo([hiker.lat, hiker.lon], 16, {
+        duration: 1.5
+      });
+    }
+  };
+
+  // One-time center when hiker is selected (from sidebar)
+  useEffect(() => {
+    if (selectedHikerId && selectedHikerId !== trackingHikerId) {
+      centerOnHiker(selectedHikerId);
+    }
+  }, [selectedHikerId]);
+
+  // Continuous tracking - auto-center when tracking a hiker
+  useEffect(() => {
+    if (trackingHikerId) {
+      centerOnHiker(trackingHikerId);
+    }
+  }, [trackingHikerId, hikers]);
+
+  // Cancel tracking when user manually moves the map
+  useEffect(() => {
+    if (!mapRef.current || !trackingHikerId) return;
+
+    const map = mapRef.current;
+
+    const handleDragStart = () => {
+      if (onTrackingCancelled) {
+        onTrackingCancelled();
+      }
+    };
+
+    map.on('dragstart', handleDragStart);
+
+    return () => {
+      map.off('dragstart', handleDragStart);
+    };
+  }, [trackingHikerId, onTrackingCancelled]);
 
   // Toggle show all hikers
   const toggleAllHikers = () => {
@@ -182,9 +221,6 @@ export const MapView: React.FC<MapViewProps> = ({
               key={hiker.id}
               position={[hiker.lat, hiker.lon]}
               icon={createHikerIcon(hiker, isUnsafe)}
-              eventHandlers={{
-                click: () => onHikerClick(hiker)
-              }}
             >
             <Popup>
               <div className="map-popup">

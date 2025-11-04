@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(taskkill:*)",
+      "Bash(npm run build:*)",
+      "WebSearch",
+      "Bash(npx tsc:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm install:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

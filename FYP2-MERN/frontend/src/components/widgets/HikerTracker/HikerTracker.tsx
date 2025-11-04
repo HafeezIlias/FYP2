@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, MapPin, Battery, Clock, AlertTriangle, Route, Edit2, Check, X } from 'lucide-react';
+import { User, MapPin, Battery, Clock, AlertTriangle, Route, Edit2, Check, X, Share2 } from 'lucide-react';
 import { Hiker } from '../../../types';
 import { Button } from '../../common/Button';
 import { getSosStatusText } from '../../../utils/hikerUtils';
@@ -13,6 +13,7 @@ interface HikerTrackerProps {
   onSosReset?: () => void;
   onShowTrackHistory?: () => void;
   onNameChange?: (newName: string) => void;
+  onShare?: () => void;
   showActions?: boolean;
   compact?: boolean;
   className?: string;
@@ -26,6 +27,7 @@ export const HikerTracker: React.FC<HikerTrackerProps> = ({
   onSosReset,
   onShowTrackHistory,
   onNameChange,
+  onShare,
   showActions = true,
   compact = false,
   className = ''
@@ -149,10 +151,10 @@ export const HikerTracker: React.FC<HikerTrackerProps> = ({
                   {Math.round(hiker.battery)}%
                 </span>
                 {hiker.battery <= 5 && (
-                  <span className="hiker-tracker__compact-critical">🔋</span>
+                  <span className="hiker-tracker__compact-critical"><Battery size={14} /></span>
                 )}
                 {hiker.battery <= 20 && hiker.battery > 5 && (
-                  <span className="hiker-tracker__compact-warning">⚠</span>
+                  <span className="hiker-tracker__compact-warning"><AlertTriangle size={14} /></span>
                 )}
               </div>
             )}
@@ -192,10 +194,10 @@ export const HikerTracker: React.FC<HikerTrackerProps> = ({
               />
             </div>
             {hiker.battery <= 20 && (
-              <span className="hiker-tracker__battery-warning">⚠ Low Battery</span>
+              <span className="hiker-tracker__battery-warning"><AlertTriangle size={14} /> Low Battery</span>
             )}
             {hiker.battery <= 5 && (
-              <span className="hiker-tracker__battery-critical">🔋 Critical</span>
+              <span className="hiker-tracker__battery-critical"><Battery size={14} /> Critical</span>
             )}
           </div>
           
@@ -274,14 +276,26 @@ export const HikerTracker: React.FC<HikerTrackerProps> = ({
                 </Button>
               )}
               {onShowTrackHistory && (
-                <Button 
-                  variant="secondary" 
-                  size="sm" 
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={onShowTrackHistory}
                   className="hiker-tracker__action"
                 >
                   <Route size={14} />
                   Track History
+                </Button>
+              )}
+              {onShare && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={onShare}
+                  className="hiker-tracker__action"
+                  title="Share location link"
+                >
+                  <Share2 size={14} />
+                  Share
                 </Button>
               )}
             </div>

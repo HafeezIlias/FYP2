@@ -1,0 +1,316 @@
+.share-link-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+/* Section Styles */
+.share-link-modal__section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.share-link-modal__section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+}
+
+.share-link-modal__description {
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+/* Options */
+.share-link-modal__options {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.share-link-modal__option {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.95rem;
+}
+
+.share-link-modal__option span {
+  min-width: 150px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.share-link-modal__option select,
+.share-link-modal__option input[type="number"] {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--background);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.share-link-modal__option select:focus,
+.share-link-modal__option input[type="number"]:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* New Token Display */
+.share-link-modal__new-token {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+}
+
+.share-link-modal__new-token .share-link-modal__section-title {
+  color: white;
+}
+
+.share-link-modal__token-display {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.share-link-modal__url {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.share-link-modal__url-input {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #333;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.share-link-modal__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* QR Code */
+.share-link-modal__qrcode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 8px;
+  margin-top: 0.5rem;
+}
+
+.share-link-modal__qrcode svg {
+  border: 2px solid #ddd;
+  border-radius: 4px;
+}
+
+.share-link-modal__qrcode-hint {
+  margin: 1rem 0 0 0;
+  color: #666;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+/* Token Cards */
+.share-link-modal__tokens-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.share-token-card {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1rem;
+  background: var(--background);
+  transition: all 0.2s ease;
+}
+
+.share-token-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.share-token-card--active {
+  border-left: 3px solid #10b981;
+}
+
+.share-token-card--inactive {
+  opacity: 0.7;
+  border-left: 3px solid #ef4444;
+}
+
+.share-token-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.share-token-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.share-token-card__status {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  width: fit-content;
+}
+
+.share-token-card__status--active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.share-token-card__status--revoked {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.share-token-card__status--expired {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.share-token-card__date {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.share-token-card__expiry {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  background: var(--surface);
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+}
+
+.share-token-card__url {
+  margin-bottom: 0.75rem;
+  padding: 0.75rem;
+  background: var(--surface);
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.share-token-card__url code {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.share-token-card__stats {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+
+.share-token-card__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Empty State */
+.share-link-modal__empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-secondary);
+}
+
+.share-link-modal__empty p {
+  margin: 0.5rem 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .share-link-modal__option {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .share-link-modal__option span {
+    min-width: auto;
+  }
+
+  .share-link-modal__option select,
+  .share-link-modal__option input[type="number"] {
+    width: 100%;
+  }
+
+  .share-token-card__header {
+    flex-direction: column;
+  }
+
+  .share-token-card__actions {
+    width: 100%;
+  }
+
+  .share-token-card__actions button {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+/* Loading State */
+.share-link-modal button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Scrollbar Styling */
+.share-link-modal::-webkit-scrollbar {
+  width: 8px;
+}
+
+.share-link-modal::-webkit-scrollbar-track {
+  background: var(--surface);
+  border-radius: 4px;
+}
+
+.share-link-modal::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.share-link-modal::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}

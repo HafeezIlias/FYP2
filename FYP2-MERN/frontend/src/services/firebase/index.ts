@@ -18,6 +18,7 @@ export { FirebaseHikerService, firebaseHikerService } from "./firebaseHiker";
 export { FirebaseTowerService, firebaseTowerService } from "./firebaseTower";
 export { FirebaseTrackService, firebaseTrackService } from "./firebaseTrack";
 export { FirebaseCommandService, firebaseCommandService } from "./firebaseCommand";
+export { FirebaseSharingService, firebaseSharingService, type ShareToken } from "./firebaseSharing";
 
 /**
  * Legacy FirebaseService class for backward compatibility

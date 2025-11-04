@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Mountain, Settings, Radio, Route } from 'lucide-react';
+import { Mountain, Settings, Radio, Route, Plane } from 'lucide-react';
 import { MapView } from './components/dashboard/MapView';
 import { HikerTracker } from './components/widgets/HikerTracker';
 import { SOSAlert } from './components/widgets/SOSAlert';
@@ -9,6 +9,7 @@ import { Sidebar } from './components/common/Sidebar';
 import { Settings as SettingsModal } from './components/dashboard/Settings';
 import { TowerManager } from './components/dashboard/TowerManager/TowerManager';
 import { TrackManager } from './components/dashboard/TrackManager/TrackManager';
+import { ShareLinkModal } from './components/dashboard/ShareLinkModal/ShareLinkModal';
 import { firebaseService } from './services/firebase';
 import { socketService } from './services/socket';
 import { authService } from './services/auth';
@@ -38,13 +39,21 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [towerManagerOpen, setTowerManagerOpen] = useState(false);
   const [trackManagerOpen, setTrackManagerOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [hikerToShare, setHikerToShare] = useState<Hiker | null>(null);
   
+  // Location state
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  
+  // Local SOS handling state - persists handled SOS alerts to prevent re-showing
+  const [handledSosAlerts, setHandledSosAlerts] = useState<Set<string>>(new Set());
+
   // App Settings
   const [appSettings, setAppSettings] = useState<AppSettings>({
     map: {
       style: 'default',
-      defaultZoom: 12,
-      center: [3.139, 101.6869]
+      defaultZoom: 13,
+      center: [3.2084, 101.7333] // Fallback center
     },
     simulation: {
       enabled: false,
@@ -66,12 +75,85 @@ function App() {
     }
   });
 
+  // Get user's current location
+  useEffect(() => {
+    const getCurrentLocation = () => {
+      if (!navigator.geolocation) {
+        console.warn('Geolocation is not supported by this browser');
+        return;
+      }
+
+      console.log('Requesting user location...');
+      
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const newLocation: [number, number] = [latitude, longitude];
+          
+          console.log('User location detected:', { latitude, longitude });
+          setUserLocation(newLocation);
+          
+          // Update app settings with user's location
+          setAppSettings(prev => ({
+            ...prev,
+            map: {
+              ...prev.map,
+              center: newLocation
+            }
+          }));
+        },
+        (error) => {
+          console.warn('Error getting user location:', error.message);
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              console.warn('User denied the request for Geolocation');
+              break;
+            case error.POSITION_UNAVAILABLE:
+              console.warn('Location information is unavailable');
+              break;
+            case error.TIMEOUT:
+              console.warn('The request to get user location timed out');
+              break;
+          }
+          // Fallback location will be used from initial state
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000 // 5 minutes cache
+        }
+      );
+    };
+
+    getCurrentLocation();
+  }, []);
+
+  // Load handled SOS alerts from localStorage
+  useEffect(() => {
+    const savedHandledSos = localStorage.getItem('trailBeaconHandledSos');
+    if (savedHandledSos) {
+      try {
+        const handledArray = JSON.parse(savedHandledSos);
+        setHandledSosAlerts(new Set(handledArray));
+        console.log('Loaded handled SOS alerts from localStorage:', handledArray);
+      } catch (error) {
+        console.error('Error loading handled SOS alerts:', error);
+      }
+    }
+  }, []);
+
   // Load settings from localStorage
   useEffect(() => {
     const savedSettings = localStorage.getItem('trailBeaconSettings');
     if (savedSettings) {
       try {
         const parsed = JSON.parse(savedSettings);
+        
+        // If user location is available, use it instead of saved center
+        if (userLocation) {
+          parsed.map.center = userLocation;
+        }
+        
         setAppSettings(parsed);
         
         // Load safety tracks from Firebase if not in simulation mode
@@ -90,10 +172,14 @@ function App() {
         safety: {
           ...prev.safety,
           tracks: []
+        },
+        map: {
+          ...prev.map,
+          center: userLocation || prev.map.center
         }
       }));
     }
-  }, []);
+  }, [userLocation]);
 
   // Initialize towers data from Firebase (only when not in simulation mode)
   useEffect(() => {
@@ -280,16 +366,57 @@ function App() {
     });
   }, [hikers]);
 
+  // Clean up handled SOS alerts for hikers that are no longer in SOS
+  useEffect(() => {
+    const currentSosHikerIds = new Set(hikers.filter(h => h.sos).map(h => h.id));
+    const handledToRemove: string[] = [];
+    
+    handledSosAlerts.forEach(hikerId => {
+      if (!currentSosHikerIds.has(hikerId)) {
+        handledToRemove.push(hikerId);
+      }
+    });
+    
+    if (handledToRemove.length > 0) {
+      const newHandledSet = new Set(handledSosAlerts);
+      handledToRemove.forEach(hikerId => {
+        newHandledSet.delete(hikerId);
+        console.log(`[SOS TRACKING] Cleaned up handled alert for ${hikerId} (no longer in SOS)`);
+      });
+      
+      setHandledSosAlerts(newHandledSet);
+      saveHandledSosAlerts(newHandledSet);
+    }
+  }, [hikers, handledSosAlerts]);
+
   // Initialize app
   useEffect(() => {
     initializeLiveData();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Handle hiker click
+  // Record hiker track history
+  useEffect(() => {
+    if (hikers.length > 0) {
+      hikers.forEach(hiker => {
+        // Only add track points for active hikers with valid coordinates
+        if (hiker.lat !== 0 && hiker.lon !== 0) {
+          hikerHistoryService.addTrackPoint(
+            hiker.id,
+            hiker.name,
+            hiker.lat,
+            hiker.lon,
+            hiker.lastUpdate
+          );
+        }
+      });
+    }
+  }, [hikers]);
+
+  // Handle hiker click - opens modal and centers map (one-time, no tracking)
   const handleHikerClick = (hiker: Hiker) => {
     setSelectedHiker(hiker);
-    setTrackingHikerId(hiker.id);
+    // Don't set trackingHikerId - only the Track button should enable tracking
   };
 
   // Handle tower click
@@ -297,6 +424,12 @@ function App() {
     console.log('Tower clicked:', tower);
     // Focus map on tower location
     // TODO: Implement tower detail modal
+  };
+
+  // Save handled SOS alerts to localStorage
+  const saveHandledSosAlerts = (handledSet: Set<string>) => {
+    const handledArray = Array.from(handledSet);
+    localStorage.setItem('trailBeaconHandledSos', JSON.stringify(handledArray));
   };
 
   // Handle settings change
@@ -317,6 +450,24 @@ function App() {
       const hiker = hikers.find(h => h.id === hikerId);
       if (!hiker) return;
 
+      if (action === 'handle') {
+        // Add to handled SOS alerts set
+        const newHandledSet = new Set(handledSosAlerts);
+        newHandledSet.add(hikerId);
+        setHandledSosAlerts(newHandledSet);
+        saveHandledSosAlerts(newHandledSet);
+        
+        console.log(`[SOS TRACKING] Added ${hikerId} to handled SOS alerts`);
+      } else if (action === 'reset') {
+        // Remove from handled SOS alerts set
+        const newHandledSet = new Set(handledSosAlerts);
+        newHandledSet.delete(hikerId);
+        setHandledSosAlerts(newHandledSet);
+        saveHandledSosAlerts(newHandledSet);
+        
+        console.log(`[SOS TRACKING] Removed ${hikerId} from handled SOS alerts`);
+      }
+
       if (appSettings.simulation.enabled) {
         // Handle SOS in simulation mode
         if (action === 'handle') {
@@ -329,9 +480,21 @@ function App() {
         setHikers(prev => prev.map(h => {
           if (h.id === hikerId) {
             if (action === 'handle') {
-              return { ...h, sosHandled: true, sosEmergencyDispatched: true };
+              return { 
+                ...h, 
+                sosHandled: true, 
+                sosEmergencyDispatched: true,
+                sosHandledTime: Date.now()
+              };
             } else {
-              return { ...h, sos: false, sosHandled: false, sosEmergencyDispatched: false, status: 'Active' as const };
+              return { 
+                ...h, 
+                sos: false, 
+                sosHandled: false, 
+                sosEmergencyDispatched: false, 
+                sosHandledTime: undefined,
+                status: 'Active' as const 
+              };
             }
           }
           return h;
@@ -365,6 +528,13 @@ function App() {
   // Handle track history toggle
   const handleToggleTrackHistory = (hikerId: string) => {
     setShowTrackHistory(showTrackHistory === hikerId ? null : hikerId);
+  };
+
+  // Handle share link
+  const handleShareHiker = (hiker: Hiker) => {
+    setHikerToShare(hiker);
+    setShareModalOpen(true);
+    setSelectedHiker(null); // Close the hiker detail modal
   };
 
   // Handle hiker name change
@@ -578,8 +748,30 @@ function App() {
     }
   };
 
-  // Get SOS hikers
-  const sosHikers = hikers.filter(hiker => hiker.sos && !hiker.sosHandled);
+  // Get SOS hikers (pending help) - exclude locally handled ones
+  const sosHikers = hikers.filter(hiker => 
+    hiker.sos && 
+    !hiker.sosHandled && 
+    !handledSosAlerts.has(hiker.id)
+  );
+  
+  // Get hikers with help on the way - include locally handled ones
+  const sosHelpOnWayHikers = hikers
+    .filter(hiker => 
+      hiker.sos && 
+      (hiker.sosHandled || handledSosAlerts.has(hiker.id))
+    )
+    .map(hiker => {
+      // If locally handled but Firebase hasn't updated yet, ensure sosHandled is true
+      if (handledSosAlerts.has(hiker.id) && !hiker.sosHandled) {
+        return {
+          ...hiker,
+          sosHandled: true,
+          sosHandledTime: hiker.sosHandledTime || Date.now()
+        };
+      }
+      return hiker;
+    });
 
   if (loading) {
     return (
@@ -666,6 +858,46 @@ function App() {
             </div>
           )}
 
+          {/* SOS Help On Way Status */}
+          {sosHelpOnWayHikers.length > 0 && (
+            <div className="app-sos-help-status">
+              {sosHelpOnWayHikers.map(hiker => (
+                <div key={hiker.id} className="sos-help-status">
+                  <div className="sos-help-status__content">
+                    <div className="sos-help-status__icon">
+                      <Plane size={20} />
+                    </div>
+                    <div className="sos-help-status__info">
+                      <h4>SOS - Help On The Way</h4>
+                      <p><strong>{hiker.name}</strong> - Emergency services dispatched</p>
+                      {hiker.sosHandledTime && (
+                        <span className="sos-help-status__time">
+                          Dispatched: {new Date(hiker.sosHandledTime).toLocaleTimeString()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="sos-help-status__actions">
+                      <Button 
+                        variant="warning" 
+                        size="sm" 
+                        onClick={() => handleSosAction(hiker.id, 'reset')}
+                      >
+                        Clear SOS
+                      </Button>
+                      <Button 
+                        variant="secondary" 
+                        size="sm" 
+                        onClick={() => handleHikerClick(hiker)}
+                      >
+                        View Location
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Map */}
           <div className="app-map">
             <MapView
@@ -676,7 +908,9 @@ function App() {
               style={appSettings.map.style}
               onHikerClick={handleHikerClick}
               onTowerClick={handleTowerClick}
+              selectedHikerId={selectedHiker?.id || null}
               trackingHikerId={trackingHikerId}
+              onTrackingCancelled={() => setTrackingHikerId(null)}
               safetyTracks={appSettings.safety.tracks}
               showSafetyTracks={appSettings.safety.enabled}
               highlightUnsafeHikers={appSettings.safety.highlightUnsafeHikers}
@@ -707,9 +941,22 @@ function App() {
             onSosReset={() => handleSosAction(selectedHiker.id, 'reset')}
             onShowTrackHistory={() => handleToggleTrackHistory(selectedHiker.id)}
             onNameChange={(newName) => handleHikerNameChange(selectedHiker.id, newName)}
+            onShare={() => handleShareHiker(selectedHiker)}
           />
         )}
       </Modal>
+
+      {/* Share Link Modal */}
+      {hikerToShare && (
+        <ShareLinkModal
+          isOpen={shareModalOpen}
+          onClose={() => {
+            setShareModalOpen(false);
+            setHikerToShare(null);
+          }}
+          hiker={hikerToShare}
+        />
+      )}
 
       {/* Settings Modal */}
       <SettingsModal
