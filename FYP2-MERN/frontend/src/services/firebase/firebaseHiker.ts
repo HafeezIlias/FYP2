@@ -10,11 +10,12 @@ import { Hiker } from "../../models/Hiker";
  * Determine hiker's movement status based on recent location logs
  */
 function determineMovementStatus(logs: any[]): string {
-  if (!logs || logs.length < 2) return "Unknown";
+  if (!logs || logs.length < 2) return "Resting";
 
-  const MOVING_THRESHOLD = 5;
-  const ACTIVE_THRESHOLD = 2;
-  const TIME_WINDOW = 10 * 60 * 1000;
+  const MOVING_THRESHOLD = 5; // meters per minute
+  const ACTIVE_THRESHOLD = 2; // meters per minute
+  const TIME_WINDOW = 10 * 60 * 1000; // 10 minutes
+  const MIN_DISTANCE_THRESHOLD = 1; // minimum 1 meter to consider any movement
   
   const latestLog = logs[0];
   const latestTime = parseTimestamp(latestLog.timestamp || latestLog.time);
@@ -23,6 +24,8 @@ function determineMovementStatus(logs: any[]): string {
     const logTime = parseTimestamp(log.timestamp || log.time);
     return (latestTime - logTime) <= TIME_WINDOW;
   });
+  
+  if (recentLogs.length < 2) return "Resting";
   
   let totalDistance = 0;
   let totalTimeMinutes = 0;
@@ -47,6 +50,9 @@ function determineMovementStatus(logs: any[]): string {
       totalTimeMinutes += timeDiffMinutes;
     }
   }
+  
+  // If total distance is negligible, hiker is resting regardless of time
+  if (totalDistance < MIN_DISTANCE_THRESHOLD) return "Resting";
   
   const averageSpeed = totalTimeMinutes > 0 ? (totalDistance / totalTimeMinutes) : 0;
   
@@ -116,6 +122,22 @@ function transformFirebaseDataToHikers(runnersData: any): Hiker[] {
       }
     }
     
+    const sosStatus = trackingData.sos_status === true || trackingData.sos_status === 'true';
+    const sosHandled = trackingData.sos_handled === true || trackingData.sos_handled === 'true';
+    
+    // Debug logging for SOS status
+    if (sosStatus) {
+      console.log(`[SOS DEBUG] Hiker ${hikerId} (${name}) - SOS: ${sosStatus}, Handled: ${sosHandled}`, {
+        trackingData: {
+          sos_status: trackingData.sos_status,
+          sos_handled: trackingData.sos_handled,
+          sos_handled_time: trackingData.sos_handled_time,
+          sos_emergency: trackingData.sos_emergency,
+          timestamp: trackingData.timestamp
+        }
+      });
+    }
+    
     const hiker = new Hiker(
       hikerId,
       name,
@@ -124,8 +146,34 @@ function transformFirebaseDataToHikers(runnersData: any): Hiker[] {
       status,
       parseFloat(String(trackingData.battery)) || 100,
       timestamp,
-      trackingData.sos_status === true || trackingData.sos_status === 'true'
+      sosStatus
     );
+    
+    // Preserve SOS handled status and times if available
+    hiker.sosHandled = sosHandled;
+    if (trackingData.sos_handled_time) {
+      hiker.sosHandledTime = trackingData.sos_handled_time;
+    }
+    
+    hiker.sosEmergencyDispatched = trackingData.sos_emergency === true || trackingData.sos_emergency === 'true';
+    if (trackingData.sos_emergency_time) {
+      hiker.sosEmergencyTime = trackingData.sos_emergency_time;
+    }
+    
+    // Set notification flags
+    hiker.sosNotified = false; // Reset for new data
+    hiker.batteryNotified = false; // Reset for new data
+    
+    // More debug logging
+    if (sosStatus) {
+      console.log(`[SOS DEBUG] Created hiker object:`, {
+        id: hiker.id,
+        name: hiker.name,
+        sos: hiker.sos,
+        sosHandled: hiker.sosHandled,
+        sosHandledTime: hiker.sosHandledTime
+      });
+    }
     
     hikers.push(hiker);
   }
@@ -166,13 +214,35 @@ export class FirebaseHikerService {
       
       const unsubscribe = onValue(runnersRef, (snapshot: DataSnapshot) => {
         const runnersData = snapshot.val();
-        console.log('Real-time hiker update received:', runnersData);
+        console.log('[SOS DEBUG] Real-time hiker update received:', runnersData);
         
         if (!runnersData) {
           console.warn('No runners data in update');
           callback([]);
           return;
         }
+        
+        // Log SOS-related data for debugging
+        Object.keys(runnersData).forEach(nodeKey => {
+          const nodeData = runnersData[nodeKey];
+          if (nodeData.logs) {
+            const logs = Object.values(nodeData.logs) as any[];
+            const latestLog = logs.sort((a: any, b: any) => {
+              const aTime = a.timestamp || a.time;
+              const bTime = b.timestamp || b.time;
+              return (bTime || 0) - (aTime || 0);
+            })[0];
+            
+            if (latestLog?.sos_status) {
+              console.log(`[SOS DEBUG] Latest log for ${nodeKey}:`, {
+                sos_status: latestLog.sos_status,
+                sos_handled: latestLog.sos_handled,
+                sos_handled_time: latestLog.sos_handled_time,
+                timestamp: latestLog.timestamp
+              });
+            }
+          }
+        });
         
         const hikers = transformFirebaseDataToHikers(runnersData);
         callback(hikers);
@@ -234,7 +304,14 @@ export class FirebaseHikerService {
       const logRef = ref(database, `runners/${hikerId}/logs/${currentTime}`);
       await update(logRef, updates);
       
-      console.log(`Updated SOS status for hiker ${hikerId}:`, updates);
+      console.log(`[SOS DEBUG] Updated SOS status for hiker ${hikerId}:`, {
+        path: `runners/${hikerId}/logs/${currentTime}`,
+        updates: updates,
+        sosStatus,
+        sosHandled,
+        sosEmergency,
+        resetSos
+      });
     } catch (error) {
       console.error('Error updating SOS status:', error);
       throw error;

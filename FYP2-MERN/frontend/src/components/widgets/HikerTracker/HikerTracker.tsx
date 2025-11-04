@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { User, MapPin, Battery, Clock, AlertTriangle, Route, Edit2, Check, X, Share2 } from 'lucide-react';
+import { User, MapPin, Battery, Clock, AlertTriangle, Route, Edit2, Check, X, Share2, Activity } from 'lucide-react';
 import { Hiker } from '../../../types';
 import { Button } from '../../common/Button';
 import { getSosStatusText } from '../../../utils/hikerUtils';
+import { hikerHistoryService } from '../../../services/hikerHistory';
 import './HikerTracker.css';
 
 interface HikerTrackerProps {
@@ -205,6 +206,32 @@ export const HikerTracker: React.FC<HikerTrackerProps> = ({
             <Clock size={16} className="hiker-tracker__icon" />
             <span className="hiker-tracker__value">{formatLastUpdate(hiker.lastUpdate)}</span>
           </div>
+
+          {/* Pace and Speed */}
+          {hikerHistoryService.hasTrackHistory(hiker.id) && (
+            <>
+              <div className="hiker-tracker__detail">
+                <Activity size={16} className="hiker-tracker__icon" />
+                <span className="hiker-tracker__value">
+                  Speed: {hikerHistoryService.formatSpeed(hikerHistoryService.getCurrentSpeed(hiker.id))} km/h
+                </span>
+              </div>
+
+              <div className="hiker-tracker__detail">
+                <Activity size={16} className="hiker-tracker__icon" />
+                <span className="hiker-tracker__value">
+                  Pace: {hikerHistoryService.formatPace(hikerHistoryService.getCurrentPace(hiker.id))} /km
+                </span>
+              </div>
+
+              <div className="hiker-tracker__detail">
+                <Route size={16} className="hiker-tracker__icon" />
+                <span className="hiker-tracker__value">
+                  Distance: {(hikerHistoryService.getTrackDistance(hiker.id) / 1000).toFixed(2)} km
+                </span>
+              </div>
+            </>
+          )}
         </div>
       )}
 

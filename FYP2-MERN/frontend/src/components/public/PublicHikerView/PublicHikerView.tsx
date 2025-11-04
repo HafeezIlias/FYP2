@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Mountain, MapPin, Battery, Clock, AlertTriangle, Activity, RefreshCw } from 'lucide-react';
+import { Mountain, MapPin, Battery, Clock, AlertTriangle, Activity, RefreshCw, Route } from 'lucide-react';
 import { firebaseSharingService } from '../../../services/firebase';
+import { hikerHistoryService } from '../../../services/hikerHistory';
 import { Hiker } from '../../../types';
 import { PublicMapView } from './PublicMapView';
 import './PublicHikerView.css';
@@ -27,6 +28,17 @@ export const PublicHikerView: React.FC = () => {
         if (hikerData) {
           setHiker(hikerData);
           setError(null);
+
+          // Record track history for pace/speed calculations
+          if (hikerData.lat !== 0 && hikerData.lon !== 0) {
+            hikerHistoryService.addTrackPoint(
+              hikerData.id,
+              hikerData.name,
+              hikerData.lat,
+              hikerData.lon,
+              hikerData.lastUpdate
+            );
+          }
         } else {
           setError('This tracking link is invalid, expired, or has been revoked.');
           setHiker(null);
@@ -202,6 +214,47 @@ export const PublicHikerView: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Speed and Pace Stats */}
+            {hikerHistoryService.hasTrackHistory(hiker.id) && (
+              <>
+                <div className="public-hiker-view__stat">
+                  <div className="public-hiker-view__stat-icon">
+                    <Activity size={20} />
+                  </div>
+                  <div className="public-hiker-view__stat-content">
+                    <div className="public-hiker-view__stat-label">Current Speed</div>
+                    <div className="public-hiker-view__stat-value">
+                      {hikerHistoryService.formatSpeed(hikerHistoryService.getCurrentSpeed(hiker.id))} km/h
+                    </div>
+                  </div>
+                </div>
+
+                <div className="public-hiker-view__stat">
+                  <div className="public-hiker-view__stat-icon">
+                    <Activity size={20} />
+                  </div>
+                  <div className="public-hiker-view__stat-content">
+                    <div className="public-hiker-view__stat-label">Pace</div>
+                    <div className="public-hiker-view__stat-value">
+                      {hikerHistoryService.formatPace(hikerHistoryService.getCurrentPace(hiker.id))} /km
+                    </div>
+                  </div>
+                </div>
+
+                <div className="public-hiker-view__stat">
+                  <div className="public-hiker-view__stat-icon">
+                    <Route size={20} />
+                  </div>
+                  <div className="public-hiker-view__stat-content">
+                    <div className="public-hiker-view__stat-label">Distance</div>
+                    <div className="public-hiker-view__stat-value">
+                      {(hikerHistoryService.getTrackDistance(hiker.id) / 1000).toFixed(2)} km
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Auto-refresh indicator */}

@@ -237,6 +237,7 @@ export class SimulationService {
         hiker.sos = false;
         hiker.sosHandled = false;
         hiker.sosEmergencyDispatched = false;
+        hiker.sosHandledTime = undefined;
         hiker.status = 'Active';
       }
 
@@ -251,6 +252,7 @@ export class SimulationService {
       hiker.sosHandled = handled;
       if (handled) {
         hiker.sosEmergencyDispatched = true;
+        hiker.sosHandledTime = Date.now();
       }
     }
   }
@@ -262,6 +264,7 @@ export class SimulationService {
       hiker.sos = false;
       hiker.sosHandled = false;
       hiker.sosEmergencyDispatched = false;
+      hiker.sosHandledTime = undefined;
       hiker.status = 'Active';
     }
   }

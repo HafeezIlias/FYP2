@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, RotateCcw, Map, Database, Bell, Shield } from 'lucide-react';
+import { Save, RotateCcw, Map, Database, Bell, Shield, Zap } from 'lucide-react';
 import { Modal } from '../../common/Modal';
 import { Button } from '../../common/Button';
 import { AppSettings } from '../../../types';
@@ -143,7 +143,7 @@ export const Settings: React.FC<SettingsProps> = ({
         {localSettings.simulation.enabled && (
           <div className="settings__section">
             <div className="settings__section-header">
-              <div className="settings__icon">⚡</div>
+              <div className="settings__icon"><Zap size={20} /></div>
               <h3>Simulation Settings</h3>
             </div>
             

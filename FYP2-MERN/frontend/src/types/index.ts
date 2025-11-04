@@ -34,6 +34,7 @@ export interface TrackPoint {
   lat: number;
   lon: number;
   timestamp: number;
+  altitude?: number; // Optional: For future elevation tracking (meters)
 }
 
 export interface SafetyTrack {
