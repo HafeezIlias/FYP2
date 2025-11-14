@@ -1,9 +1,12 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import './index.css';
-import App from './App';
+import { Dashboard } from './pages/Dashboard';
+import { LoginPage } from './pages/LoginPage';
 import { PublicHikerView } from './components/public/PublicHikerView';
+import { AuthProvider } from './contexts/AuthContext';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import reportWebVitals from './reportWebVitals';
 
 const root = ReactDOM.createRoot(
@@ -12,13 +15,31 @@ const root = ReactDOM.createRoot(
 root.render(
   <React.StrictMode>
     <BrowserRouter>
-      <Routes>
-        {/* Public tracking route - no authentication required */}
-        <Route path="/track/:token" element={<PublicHikerView />} />
+      <AuthProvider>
+        <Routes>
+          {/* Public tracking route - no authentication required */}
+          <Route path="/track/:token" element={<PublicHikerView />} />
 
-        {/* Main dashboard route */}
-        <Route path="/*" element={<App />} />
-      </Routes>
+          {/* Login route */}
+          <Route path="/login" element={<LoginPage />} />
+
+          {/* Protected dashboard route */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Redirect root to dashboard (will redirect to login if not authenticated) */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+          {/* Catch all - redirect to dashboard */}
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>
 );
